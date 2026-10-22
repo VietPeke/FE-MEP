@@ -6,6 +6,13 @@ export const sidebarItems = [
     label: 'Tổng quan',
     icon: 'dashboard',
     path: '/inventory/dashboard',
+    staffOnly: true,
+  },
+  {
+    label: 'Tổng quan',
+    icon: 'dashboard',
+    path: '/inventory/owner-dashboard',
+    ownerOnly: true,
   },
   {
     label: 'Hàng hóa & Kho',
@@ -59,6 +66,16 @@ export const sidebarItems = [
       { label: 'Voucher chiết khấu', path: '/inventory/promotions/vouchers' },
     ],
   },
+
+  {
+    label: 'Chi phí',
+    icon: 'request_quote',
+    ownerOnly: true,
+    children: [
+      { label: 'Quản lý chi phí', path: '/inventory/expenses' },
+      { label: 'Loại chi phí', path: '/inventory/expense-categories' },
+    ],
+  },
   {
     label: 'Hệ thống & Nhân sự',
     icon: 'UserCog',
@@ -69,9 +86,7 @@ export const sidebarItems = [
     label: 'Báo cáo',
     icon: 'assessment',
     children: [
-      // staffOnly: Nếu là Owner sẽ bị ẩn, chỉ Staff mới thấy
       { label: 'Báo cáo kho', path: '/inventory/reports', staffOnly: true },
-      // ownerOnly: Nếu là Staff sẽ bị ẩn, chỉ Owner mới thấy
       { label: 'Báo cáo Tổng hợp', path: '/inventory/owner-reports', ownerOnly: true },
     ],
   },

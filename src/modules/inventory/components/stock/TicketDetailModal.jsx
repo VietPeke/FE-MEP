@@ -295,7 +295,7 @@ export const TicketDetailModal = ({
               </div>
               <div>
                 <span className="block text-xs font-semibold uppercase text-slate-500">
-                  Ngày tạo
+                  Thời gian
                 </span>
                 <div className="mt-1 flex items-center gap-1 font-semibold text-slate-800">
                   <CalendarClock size={14} className="text-slate-400" />
@@ -310,6 +310,16 @@ export const TicketDetailModal = ({
                   {renderTicketTypeLabel(detail.ticketType, type)}
                 </div>
               </div>
+              {type === 'OUTWARD' && (
+                <div className="sm:col-span-4">
+                  <span className="block text-xs font-semibold uppercase text-slate-500">
+                    Đối tượng xuất
+                  </span>
+                  <div className="mt-1 font-semibold text-slate-800">
+                    {detail.targetName || detail.customerName || detail.partnerName || '---'}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
@@ -395,7 +405,7 @@ export const TicketDetailModal = ({
                         <th className="px-3 py-3 text-right text-slate-500">Tồn trước</th>
                       )}
                       <th className="px-3 py-3 text-right font-extrabold text-[#004785]">
-                        {type === 'INWARD' ? '+ Nhập vào' : '- Xuất đi'}
+                        {type === 'INWARD' ? '+ Nhập vào' : 'Xuất đi'}
                       </th>
                       {isCompleted && (
                         <th className="px-3 py-3 text-right text-green-700">Tồn sau</th>

@@ -8,7 +8,11 @@ const InventorySidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [expandedMenus, setExpandedMenus] = useState({});
+  const [expandedMenus, setExpandedMenus] = useState(() => {
+    // Auto-expand menu đầu tiên có children
+    const firstGroup = sidebarItems.find((item) => item.children?.length > 0);
+    return firstGroup ? { [firstGroup.label]: true } : {};
+  });
 
   const userRoles = user?.roles || (user?.role ? [user.role] : []);
   const isOwner = userRoles.includes('Owner');
@@ -44,18 +48,26 @@ const InventorySidebar = () => {
     });
   }, [location.pathname, visibleMenuItems]);
 
-  const toggleParentMenu = (label, path) => {
+  const toggleParentMenu = (label, path, children) => {
+    // Luôn toggle expand
+    setExpandedMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+    // Nếu có path thì navigate, nếu không có path và có children thì navigate tới child đầu tiên
     if (path) {
       navigate(path);
-    } else {
-      setExpandedMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+    } else if (children && children.length > 0 && children[0].path) {
+      navigate(children[0].path);
     }
   };
 
   const isItemActive = (path) => {
     if (!path) return false;
+
     if (path === '/inventory/dashboard')
       return location.pathname.startsWith('/inventory/dashboard');
+
+    if (path === '/inventory/owner-dashboard')
+      return location.pathname.startsWith('/inventory/owner-dashboard');
+
     if (path === '/inventory/reports') return location.pathname === '/inventory/reports';
     if (path === '/inventory/owner-reports')
       return location.pathname.startsWith('/inventory/owner-reports');
@@ -78,14 +90,14 @@ const InventorySidebar = () => {
             <div key={item.label} className="flex flex-col">
               <button
                 type="button"
-                onClick={() => toggleParentMenu(item.label, item.path)}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition-colors duration-200 ${
+                onClick={() => toggleParentMenu(item.label, item.path, item.children)}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition-colors duration-150 ${
                   active
                     ? 'bg-blue-50 font-bold text-[#004785]'
                     : isAnyChildActive
                       ? 'bg-slate-100 font-bold text-[#004785]'
                       : 'font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                }`}
+                } ${hasChildren ? 'cursor-pointer' : ''}`}
               >
                 <div className="flex items-center gap-3">
                   <Icon name={item.icon} size={22} className="shrink-0" />

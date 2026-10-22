@@ -41,6 +41,10 @@ const SupplierDebtManagement = lazy(
 const SupplierPaymentManagement = lazy(
   () => import('./modules/inventory/pages/SupplierPaymentManagement')
 );
+const ExpenseManagement = lazy(() => import('./modules/inventory/pages/ExpenseManagement'));
+const ExpenseCategoryManagement = lazy(
+  () => import('./modules/inventory/pages/ExpenseCategoryManagement')
+);
 
 // POS Module
 const PosLayout = lazy(() => import('./modules/pos/layouts/PosLayout'));
@@ -60,6 +64,7 @@ const SystemNotifications = lazy(() => import('./modules/admin/pages/SystemNotif
 const SystemLog = lazy(() => import('./modules/admin/pages/SystemLog'));
 
 // Owner Module
+const OwnerDashboard = lazy(() => import('./modules/owner/pages/Dashboard'));
 const BranchManagement = lazy(() => import('./modules/owner/pages/BranchManagement'));
 const StaffManagement = lazy(() => import('./modules/owner/pages/StaffManagement'));
 
@@ -103,7 +108,21 @@ function App() {
           <Route element={<PrivateRoute allowedRoles={['Owner', 'InventoryStaff']} />}>
             <Route path="/inventory" element={<InventoryLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<InventoryDashboard />} />
+
+              {/* --- ROUTE INVENTORY STAFF --- */}
+              <Route element={<PrivateRoute allowedRoles={['InventoryStaff']} />}>
+                <Route path="dashboard" element={<InventoryDashboard />} />
+              </Route>
+
+              {/* --- ROUTE OWNER --- */}
+              <Route element={<PrivateRoute allowedRoles={['Owner']} />}>
+                <Route path="owner-dashboard" element={<OwnerDashboard />} />
+                <Route path="branches" element={<BranchManagement />} />
+                <Route path="employees" element={<StaffManagement />} />
+                <Route path="owner-reports" element={<OwnerReports />} />
+              </Route>
+
+              {/* --- ROUTE OWNER & STAFF --- */}
               <Route path="products" element={<InventoryProduct />} />
               <Route path="import" element={<StockImport />} />
               <Route path="export" element={<StockExport />} />
@@ -116,15 +135,9 @@ function App() {
               <Route path="orders" element={<OrderList />} />
               <Route path="suppliers" element={<SupplierManagement />} />
               <Route path="supplier-debt" element={<SupplierDebtManagement />} />
-
-              {/* ---> BỔ SUNG ROUTE MỚI Ở ĐÂY <--- */}
               <Route path="supplier-payments" element={<SupplierPaymentManagement />} />
-
-              <Route element={<PrivateRoute allowedRoles={['Owner']} />}>
-                <Route path="branches" element={<BranchManagement />} />
-                <Route path="employees" element={<StaffManagement />} />
-                <Route path="owner-reports" element={<OwnerReports />} />
-              </Route>
+              <Route path="expenses" element={<ExpenseManagement />} />
+              <Route path="expense-categories" element={<ExpenseCategoryManagement />} />
             </Route>
           </Route>
 
@@ -139,7 +152,7 @@ function App() {
             </Route>
           </Route>
 
-          {/* CÁC ROUTE LỖI */}
+          {/* ROUTE ERROR */}
           <Route path="/403" element={<AccessDenied />} />
           <Route path="/500" element={<ServerError />} />
           <Route path="*" element={<NotFound />} />
