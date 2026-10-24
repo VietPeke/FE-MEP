@@ -30,21 +30,34 @@ const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản' };
 const newPaymentLine = (method = 'cash') => ({ id: Date.now(), method, amount: 0 });
 
 // Map API product sang format POS cart (có hỗ trợ UOM)
-const mapToPosProduct = (p) => ({
-  id: p.productId || p.productCode || p.id || '',
-  name: p.productName || p.name || '',
-  price: p.retailPrice ?? p.unitPrice ?? p.salePrice ?? p.price ?? 0,
-  sku: p.productCode || p.barcode || '',
-  stock: p.availableStock ?? p.quantity ?? p.stock ?? 0,
-  category: p.categoryName || p.group || p.category || '',
-  status: (p.availableStock ?? p.quantity ?? p.stock ?? 0) > 0 ? 'Còn hàng' : 'Hết hàng',
-  image: p.image || '',
-  productId: p.productId || p.id || '',
-  barcode: p.barcode || '',
-  unit: p.unit || 'Cái', // Base unit
-  conversionUnits: p.conversionUnits || [], // Các đơn vị quy đổi
-  hasMultipleUnits: (p.conversionUnits || []).length > 0, // Có nhiều đơn vị không
-});
+const mapToPosProduct = (p) => {
+  console.log('[DEBUG mapToPosProduct] product data:', {
+    productId: p.productId || p.productCode || p.id,
+    name: p.productName || p.name,
+    retailPrice: p.retailPrice,
+    floorPrice: p.floorPrice,
+    unitPrice: p.unitPrice,
+    salePrice: p.salePrice,
+    price: p.price,
+    unit: p.unit,
+    conversionUnits: p.conversionUnits,
+  });
+  return {
+    id: p.productId || p.productCode || p.id || '',
+    name: p.productName || p.name || '',
+    price: p.retailPrice ?? p.unitPrice ?? p.salePrice ?? p.price ?? 0,
+    sku: p.productCode || p.barcode || '',
+    stock: p.availableStock ?? p.quantity ?? p.stock ?? 0,
+    category: p.categoryName || p.group || p.category || '',
+    status: (p.availableStock ?? p.quantity ?? p.stock ?? 0) > 0 ? 'Còn hàng' : 'Hết hàng',
+    image: p.image || '',
+    productId: p.productId || p.id || '',
+    barcode: p.barcode || '',
+    unit: p.unit || 'Cái', // Base unit
+    conversionUnits: p.conversionUnits || [], // Các đơn vị quy đổi
+    hasMultipleUnits: (p.conversionUnits || []).length > 0, // Có nhiều đơn vị không
+  };
+};
 
 const POSScreen = () => {
   const { search, setSearch, showNotice, quickAddCust, setDrafts, setFooterInfo } =
@@ -250,6 +263,17 @@ const POSScreen = () => {
       }
 
       // 2. Thêm từng sản phẩm vào hóa đơn (kèm UOM data)
+      console.log(
+        '[DEBUG] addInvoiceItem payloads:',
+        cart.cart.map((item) => ({
+          productId: item.productId || item.id,
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          selectedUnit: item.selectedUnit,
+          convertValue: item.convertValue,
+        }))
+      );
       await Promise.all(
         cart.cart.map((item) =>
           addInvoiceItem(invoice.invoiceId, {
@@ -320,6 +344,13 @@ const POSScreen = () => {
         await finalizeInvoice(invoice.invoiceId);
       } catch (finalErr) {
         console.warn('[POS] finalizeInvoice error:', finalErr);
+        console.warn('[DEBUG finalizeInvoice] chi tiết lỗi:', {
+          message: finalErr.message,
+          data: finalErr.data,
+          response: finalErr.response,
+          status: finalErr.status,
+          errors: finalErr.errors,
+        });
       }
 
       // Cập nhật realtime cho ca đang mở (cộng dồn vào sessionStorage)
@@ -414,16 +445,44 @@ const POSScreen = () => {
           createdBy: staffName,
         });
         // Thêm sản phẩm (kèm UOM data)
+        console.log(
+          '[DEBUG handleOpenPay - Transfer] cart items:',
+          JSON.stringify(
+            cart.cart.map((item) => ({
+              productId: item.productId || item.id,
+              name: item.name,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              selectedUnit: item.selectedUnit,
+              convertValue: item.convertValue,
+              price: item.price,
+              retailPrice: item.retailPrice,
+              floorPrice: item.floorPrice,
+              salePrice: item.salePrice,
+              unit: item.unit,
+            })),
+            null,
+            2
+          )
+        );
+        console.log('[DEBUG handleOpenPay - Transfer] invoiceId:', invoice.invoiceId);
         await Promise.all(
-          cart.cart.map((item) =>
-            addInvoiceItem(invoice.invoiceId, {
+          cart.cart.map((item) => {
+            console.log('[DEBUG handleOpenPay] gửi item:', {
               productId: item.productId || item.id,
               quantity: item.quantity,
               unitPrice: item.price,
               selectedUnit: item.selectedUnit,
               convertValue: item.convertValue,
-            })
-          )
+            });
+            return addInvoiceItem(invoice.invoiceId, {
+              productId: item.productId || item.id,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              selectedUnit: item.selectedUnit,
+              convertValue: item.convertValue,
+            });
+          })
         );
         // Lưu tên thu ngân
         const invoiceId = invoice.invoiceId;
@@ -504,26 +563,62 @@ const POSScreen = () => {
             })
           )
         );
-        // Tạo payment cho từng dòng (chỉ khi amount > 0)
-        // Chỉ tạo Cash ở đây, Transfer sẽ được tạo trong handleOpenQRPayment
-        for (const line of lines) {
-          if (line.amount <= 0) continue;
-          if (line.method === 'Cash') {
-            await createPayment(invoiceId, {
-              method: 'Cash',
-              amount: line.amount,
-              cashReceived: line.amount,
+        // Tạo payment Combined duy nhất
+        const validLines = lines.filter((l) => l.amount > 0);
+        if (validLines.length === 0) throw new Error('Không có số tiền hợp lệ');
+
+        const paymentRes = await createPayment(invoiceId, {
+          method: 'Combined',
+          amount: finalTotal,
+          paymentLines: validLines.map((l) => ({
+            method: l.method,
+            amount: l.amount,
+            cashReceived: l.method === 'Cash' ? l.amount : null,
+          })),
+        });
+
+        const payments = paymentRes.data || paymentRes;
+        const transferPayment = Array.isArray(payments)
+          ? payments.find((p) => p.Method === 'Transfer' || p.method === 'Transfer')
+          : null;
+
+        if (transferPayment) {
+          setPendingPayLines(lines);
+          setQrData({
+            paymentId: transferPayment.PaymentId || transferPayment.paymentId,
+            qrImageBase64: transferPayment.qrImageBase64 || transferPayment.QRImageBase64,
+            transactionContent: transferPayment.transactionContent || transferPayment.VietQRString,
+            amount: transferPayment.Amount || transferPayment.amount,
+            bankAccountNumber: transferPayment.bankAccountNumber || '0975849675',
+            bankName: transferPayment.bankName || 'MB Bank',
+          });
+          setPendingInvoice({
+            invoiceId,
+            invoiceCode: invoice.invoiceCode || `INV-${invoiceId.toString().slice(0, 8)}`,
+          });
+          try {
+            const pendingOrders = JSON.parse(localStorage.getItem('pos_pending_orders') || '[]');
+            pendingOrders.push({
+              invoiceId,
+              paymentId: transferPayment.PaymentId || transferPayment.paymentId,
+              amount: transferPayment.Amount || transferPayment.amount,
+              createdAt: new Date().toISOString(),
+              customer: selectedCustomer?.name || 'Khách lẻ',
             });
-          }
-          // Transfer sẽ được tạo trong handleOpenQRPayment để hiển QR
-        }
-        // Lấy payment Transfer để hiển QR
-        const transferLine = lines.find((l) => l.method === 'Transfer' && l.amount > 0);
-        if (transferLine) {
-          setPendingPayLines(lines); // Lưu tất cả dòng thanh toán (cả Cash + Transfer)
-          await handleOpenQRPayment(invoiceId, transferLine.amount, invoice.invoiceCode);
+            localStorage.setItem('pos_pending_orders', JSON.stringify(pendingOrders));
+          } catch (_) {}
+          try {
+            const savedPM = JSON.parse(localStorage.getItem('pos_order_payments') || '{}');
+            savedPM[invoiceId] = JSON.stringify([
+              { method: 'Chuyển khoản', amount: transferPayment.Amount || transferPayment.amount },
+            ]);
+            localStorage.setItem('pos_order_payments', JSON.stringify(savedPM));
+          } catch (_) {}
+
+          setShowPayModal(false);
+          setShowQRModal(true);
+          setPaying(false);
         } else {
-          // Không có Transfer → finalize luôn
           await finalizeInvoice(invoiceId);
           showNotice('Thanh toán thành công!');
           setShowPayModal(false);
@@ -683,6 +778,13 @@ const POSScreen = () => {
       refetchProducts();
     } catch (err) {
       console.error('[POS] QR Confirm error:', err);
+      console.warn('[DEBUG QR Confirm] chi tiết lỗi:', {
+        message: err.message,
+        data: err.data,
+        response: err.response,
+        status: err.status,
+        errors: err.errors,
+      });
       showNotice('Lỗi xác nhận: ' + (err.message || 'Không thể xác nhận'));
     } finally {
       setConfirmLoading(false);
