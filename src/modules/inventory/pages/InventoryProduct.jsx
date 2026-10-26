@@ -6,6 +6,7 @@ import { useProductList } from '../hooks/useProductList';
 import { ProductFilterDrawer } from '../components/product/ProductFilterDrawer';
 import { ProductTable } from '../components/product/ProductTable';
 import { CategoryBrandManagerModal } from '../components/product/CategoryBrandManagerModal';
+import { LocationAttributeModal } from '../components/product/LocationAttributeModal';
 import { EditProductModal } from '../components/product/EditProductModal';
 
 export const ProductManagement = () => {
@@ -13,9 +14,11 @@ export const ProductManagement = () => {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [locationAttrModalOpen, setLocationAttrModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const [initialEditTab, setInitialEditTab] = useState('info');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const filters = useProductFilters();
   const activeQueryParams = filters.queryParams;
@@ -56,12 +59,23 @@ export const ProductManagement = () => {
     if (totalPages > 0 && currentPage > totalPages) setCurrentPage(totalPages);
   }, [totalPages, currentPage, setCurrentPage]);
 
+  // Tự động ẩn thông báo thành công sau 2.5s
+  useEffect(() => {
+    if (!successMsg) return;
+    const timer = setTimeout(() => setSuccessMsg(''), 2500);
+    return () => clearTimeout(timer);
+  }, [successMsg]);
+
   const handleSave = (updated) => {
+    const isUpdate = Boolean(
+      productToEdit?.id && !productToEdit.id.toString().startsWith('SP-DRAFT')
+    );
     handleSaveProduct(updated, productToEdit, () => {
       filters.setCurrentPage(1);
       setEditModalOpen(false);
       setProductToEdit(null);
       refetch();
+      setSuccessMsg(isUpdate ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!');
     });
   };
 
@@ -81,6 +95,12 @@ export const ProductManagement = () => {
 
   return (
     <div className="mt-2 w-full space-y-4 text-slate-800">
+      {/* Toast thông báo thành công */}
+      {successMsg && (
+        <div className="fixed left-1/2 top-5 z-[100] -translate-x-1/2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-2xl">
+          {successMsg}
+        </div>
+      )}
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Hàng hóa</h1>
@@ -157,7 +177,7 @@ export const ProductManagement = () => {
               onClick={() => setFilterDrawerOpen(true)}
               className="relative flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
             >
-              <Icon name="ListFilter" size={16} className="text-slate-500" />
+              <Icon name="Layers" size={16} className="text-slate-500" />
               Bộ lọc
               {activeFilterCount > 0 && (
                 <span className="ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#004785] px-1 text-[11px] font-bold text-white">
@@ -174,6 +194,14 @@ export const ProductManagement = () => {
             >
               <Icon name="Bookmark" className="text-sm text-slate-500" />
               Nhóm hàng & Thương hiệu
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              onClick={() => setLocationAttrModalOpen(true)}
+            >
+              <Icon name="location_on" className="text-sm text-slate-500" />
+              Vị trí & Thuộc tính
             </button>
             <button
               type="button"
@@ -272,6 +300,12 @@ export const ProductManagement = () => {
       <CategoryBrandManagerModal
         open={categoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
+        onSuccess={() => refetch()}
+      />
+
+      <LocationAttributeModal
+        open={locationAttrModalOpen}
+        onClose={() => setLocationAttrModalOpen(false)}
         onSuccess={() => refetch()}
       />
     </div>

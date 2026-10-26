@@ -194,11 +194,14 @@ const POSScreen = () => {
   useEffect(() => {
     if (draftData && draftData.id !== loadedDraft.current) {
       loadedDraft.current = draftData.id;
-      // Nap items vao cart
-      draftData.items.forEach((item) => cart.addToCart(item));
+      // Load trực tiếp items vào cart, giữ nguyên id và quantity gốc từ draft
+      cart.loadDraft(draftData.items);
       setSelectedCustomer(draftData.customer);
       // Xoa draft khoi danh sach
       setDrafts((prev) => prev.filter((d) => d.id !== draftData.id));
+
+      // Xóa state trong history để tránh bị nạp lại nếu người dùng ấn F5
+      window.history.replaceState({}, '');
     }
   }, [draftData, cart, setDrafts]);
 
@@ -302,15 +305,23 @@ const POSScreen = () => {
         });
         payMethodsVN.push({ method: vnMethod, amount: line.amount });
         const pmBody = { method, amount: line.amount };
+        if (method === 'Cash' || method.toLowerCase() === 'cash') {
+          pmBody.cashReceived =
+            totalPaidAmount && totalPaidAmount >= line.amount ? totalPaidAmount : line.amount;
+        }
         try {
           await createPayment(invoice.invoiceId, pmBody);
         } catch (pmErr) {
           console.warn('[POS] createPayment error:', pmErr.data || pmErr.message);
           // Thử các format khác nhau
           const attempts = [
-            { paymentMethod: method, amount: line.amount },
-            { method: method.toLowerCase(), amount: line.amount },
-            { Method: method, Amount: line.amount },
+            { paymentMethod: method, amount: line.amount, cashReceived: pmBody.cashReceived },
+            {
+              method: method.toLowerCase(),
+              amount: line.amount,
+              cashReceived: pmBody.cashReceived,
+            },
+            { Method: method, Amount: line.amount, CashReceived: pmBody.cashReceived },
           ];
           let lastErr = pmErr;
           for (const attempt of attempts) {
