@@ -73,14 +73,7 @@ export const StockImport = () => {
   const [products, setProducts] = useState(fallbackProducts);
   const [suppliers, setSuppliers] = useState(fallbackSuppliers);
 
-  const [selectedSupplier, setSelectedSupplier] = useState(() => {
-    try {
-      const saved = localStorage.getItem('stockImport_supplier');
-      return saved ? JSON.parse(saved) : fallbackSuppliers[0];
-    } catch {
-      return fallbackSuppliers[0];
-    }
-  });
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
 
   const [items, setItems] = useState(() => {
     try {
@@ -94,12 +87,11 @@ export const StockImport = () => {
   const [inwardType, setInwardType] = useState(
     () => Number(localStorage.getItem('stockImport_type')) || 1
   );
-  const [note, setNote] = useState(
-    () => localStorage.getItem('stockImport_note') || 'Nhập hàng định kỳ'
-  );
+  const [note, setNote] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: 'info', message: 'Sẵn sàng tạo phiếu nhập kho' });
+  const [globalError, setGlobalError] = useState('');
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -108,15 +100,8 @@ export const StockImport = () => {
     localStorage.setItem('stockImport_items', JSON.stringify(items));
   }, [items]);
   useEffect(() => {
-    if (selectedSupplier)
-      localStorage.setItem('stockImport_supplier', JSON.stringify(selectedSupplier));
-  }, [selectedSupplier]);
-  useEffect(() => {
     localStorage.setItem('stockImport_type', inwardType);
   }, [inwardType]);
-  useEffect(() => {
-    localStorage.setItem('stockImport_note', note);
-  }, [note]);
 
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [inwardsList, setInwardsList] = useState([]);
@@ -130,6 +115,7 @@ export const StockImport = () => {
       setInwardsList(extractList(res).map(normalizeInwardRow).filter(Boolean));
     } catch {
       setInwardsList([]);
+      setGlobalError('Không thể tải lịch sử phiếu nhập kho.');
     } finally {
       setIsLoadingHistory(false);
     }
@@ -147,11 +133,10 @@ export const StockImport = () => {
         if (pList.length > 0) setProducts(pList);
         if (sList.length > 0) {
           setSuppliers(sList);
-          setSelectedSupplier(sList[0]);
         }
         setStatus({ type: 'success', message: 'Đã tải dữ liệu hệ thống' });
       } catch {
-        setStatus({ type: 'info', message: 'Đang dùng dữ liệu cục bộ' });
+        setGlobalError('Không thể tải dữ liệu sản phẩm hoặc nhà cung cấp.');
       } finally {
         setIsLoadingData(false);
         loadInwardHistory();
@@ -292,20 +277,62 @@ export const StockImport = () => {
   }, [inwardsList]);
 
   return (
-    <div className="animate-in fade-in mt-8 w-full space-y-6 duration-200">
+    <div className="animate-in fade-in w-full space-y-6 duration-200">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Nhập kho</h1>
+          <p className="mt-1 text-gray-600">Ghi nhận và quản lý các phiếu nhập kho</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm">
             {isLoadingData ? 'Đang tải dữ liệu...' : 'Sẵn sàng tạo phiếu'}
           </div>
           <Button variant="primary" onClick={openModal}>
-            + Nhập hàng
+            Nhập hàng
           </Button>
         </div>
       </div>
+
+      {/* Error banner */}
+      {globalError && (
+        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+          <svg
+            className="mt-0.5 h-5 w-5 shrink-0 text-red-500"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <div className="flex-1">
+            <p className="font-semibold text-red-800">Đã xảy ra lỗi</p>
+            <p className="mt-1 text-sm text-red-700">{globalError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setGlobalError('')}
+            className="shrink-0 rounded p-1 text-red-400 hover:bg-red-100 hover:text-red-600"
+          >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
@@ -342,33 +369,37 @@ export const StockImport = () => {
         isOpen={isModalOpen}
         onClose={() => !isSubmitting && setIsModalOpen(false)}
         title="Tạo phiếu nhập kho"
-        size="6xl"
+        size="7xl"
       >
-        <div className="grid gap-6 xl:grid-cols-[7fr_3fr]">
-          <ImportItemsTable
-            items={items}
-            products={products}
-            onAddProduct={addProductToTicket}
-            onUpdateItem={updateItem}
-            onRemoveItem={removeItem}
-            onAddNewProduct={() => setIsProductModalOpen(true)}
-            formatCurrency={formatCurrency}
-          />
+        <div className="flex flex-col gap-6 xl:flex-row">
+          <div className="min-w-0 flex-1">
+            <ImportItemsTable
+              items={items}
+              products={products}
+              onAddProduct={addProductToTicket}
+              onUpdateItem={updateItem}
+              onRemoveItem={removeItem}
+              onAddNewProduct={() => setIsProductModalOpen(true)}
+              formatCurrency={formatCurrency}
+            />
+          </div>
 
-          <ImportTicketForm
-            inwardType={inwardType}
-            onChangeInwardType={setInwardType}
-            suppliers={suppliers}
-            selectedSupplier={selectedSupplier}
-            onSelectSupplier={setSelectedSupplier}
-            note={note}
-            onChangeNote={setNote}
-            totals={totals}
-            status={status}
-            isSubmitting={isSubmitting}
-            onSubmit={handleFinish}
-            formatCurrency={formatCurrency}
-          />
+          <div className="w-full shrink-0 xl:w-[300px]">
+            <ImportTicketForm
+              inwardType={inwardType}
+              onChangeInwardType={setInwardType}
+              suppliers={suppliers}
+              selectedSupplier={selectedSupplier}
+              onSelectSupplier={setSelectedSupplier}
+              note={note}
+              onChangeNote={setNote}
+              totals={totals}
+              status={status}
+              isSubmitting={isSubmitting}
+              onSubmit={handleFinish}
+              formatCurrency={formatCurrency}
+            />
+          </div>
         </div>
       </Modal>
 
@@ -394,10 +425,10 @@ export const StockImport = () => {
                 setStatus({ type: 'success', message: 'Đã tạo và thêm sản phẩm vào phiếu!' });
                 setIsProductModalOpen(false);
               } else {
-                setStatus({ type: 'error', message: 'Không thể tạo sản phẩm!' });
+                setStatus({ type: 'error', message: 'Lỗi tạo sản phẩm, vui lòng thử lại' });
               }
             } catch (err) {
-              setStatus({ type: 'error', message: 'Lỗi khi tạo sản phẩm: ' + (err.message || '') });
+              setStatus({ type: 'error', message: 'Lỗi tạo sản phẩm, vui lòng thử lại' });
             }
           }}
         />

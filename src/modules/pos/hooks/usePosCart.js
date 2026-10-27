@@ -74,7 +74,7 @@ export const usePosCart = (initialItems = []) => {
       else displayUnit = `${unitName} (1/${Math.round(1 / convertValue)} ${baseUnit})`; // Mét (1/100 Cuộn)
 
       // Lấy stock (API trả về đã là base unit)
-      const baseStock = product.availableStock ?? product.stock ?? 0;
+      const baseStock = product.baseStock ?? product.availableStock ?? product.stock ?? 0;
 
       // === FIX: Kiểm tra stock overdraw cho cùng productId ===
       // Tính base units đã sử dụng bởi các items khác cùng productId (loại trừ existed)
@@ -89,12 +89,9 @@ export const usePosCart = (initialItems = []) => {
       // === END FIX ===
 
       if (existed) {
-        // Tính maxQty = remainingStock / convertValue (chuyển đổi về đơn vị đã chọn)
-        const remainingStock = Math.max(0, baseStock - otherUsedStock);
-        const maxQty = Math.floor(remainingStock / convertValue);
-        return prev.map((item) =>
-          item.id === itemId ? { ...item, quantity: Math.min(maxQty, item.quantity + 1) } : item
-        );
+        // F5 bug fix: không cộng thêm +1 khi sản phẩm đã tồn tại
+        // Giữ nguyên quantity hiện tại - user muốn thêm phải dùng nút + trong cart
+        return prev;
       }
 
       return [
@@ -111,6 +108,57 @@ export const usePosCart = (initialItems = []) => {
           baseUnit,
           baseStock, // Stock gốc (base unit)
           maxQty: Math.floor(Math.max(0, baseStock) / convertValue), // Số lượng max theo đơn vị đã chọn
+        },
+      ];
+    });
+  }, []);
+
+  /**
+   * Thêm sản phẩm vào giỏ với số lượng cụ thể (không cộng dồn)
+   * Dùng cho Resume draft - set quantity chính xác từ DB
+   */
+  const addToCartWithQuantity = useCallback((product, quantity = 1, selectedUnit = null) => {
+    setCart((prev) => {
+      const itemId = selectedUnit ? `${product.id}-${selectedUnit.name}` : product.id;
+
+      const existed = prev.find((item) => item.id === itemId);
+
+      const unitName = selectedUnit?.name || product.unit || 'Cái';
+      const convertValue = selectedUnit?.convertValue || 1;
+      const price = selectedUnit?.price ?? product.price;
+      const baseUnit = product.unit || 'Cái';
+      const baseStock = product.baseStock ?? product.availableStock ?? product.stock ?? 0;
+
+      if (existed) {
+        // Nếu đã tồn tại, cập nhật quantity về giá trị mới (thay vì cộng dồn)
+        const otherUsedStock = calcUsedStock(prev, product.id, itemId);
+        const remainingStock = Math.max(0, baseStock - otherUsedStock);
+        const maxQty = Math.floor(remainingStock / convertValue);
+        return prev.map((item) =>
+          item.id === itemId ? { ...item, quantity: Math.min(maxQty, quantity) } : item
+        );
+      }
+
+      // Tạo mới với quantity được chỉ định
+      let displayUnit;
+      if (convertValue === 1) displayUnit = unitName;
+      else if (convertValue >= 1) displayUnit = `${unitName} (×${convertValue})`;
+      else displayUnit = `${unitName} (1/${Math.round(1 / convertValue)} ${baseUnit})`;
+
+      return [
+        ...prev,
+        {
+          ...product,
+          productId: product.id,
+          id: itemId,
+          quantity: quantity,
+          price,
+          selectedUnit: unitName,
+          convertValue,
+          displayUnit,
+          baseUnit,
+          baseStock,
+          maxQty: Math.floor(Math.max(0, baseStock) / convertValue),
         },
       ];
     });
@@ -198,6 +246,21 @@ export const usePosCart = (initialItems = []) => {
     localStorage.removeItem(CART_STORAGE_KEY);
   }, []);
 
+  /**
+   * Load draft items trực tiếp vào cart (giữ nguyên id, quantity từ draft)
+   * Không qua addToCartWithQuantity để tránh lỗi tính toán lại id và quantity
+   */
+  const loadDraft = useCallback((items) => {
+    setCart(
+      items.map((item) => ({
+        ...item,
+        id: item.id,
+        quantity: item.quantity,
+      }))
+    );
+    localStorage.removeItem(CART_STORAGE_KEY);
+  }, []);
+
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discount = 0; // Voucher removed; tier discount applied separately in PaymentModal
   const total = subtotal;
@@ -216,6 +279,8 @@ export const usePosCart = (initialItems = []) => {
     paymentMethod,
     setPaymentMethod,
     addToCart,
+    addToCartWithQuantity,
+    loadDraft,
     changeQty,
     setItemQuantity,
     removeItem,

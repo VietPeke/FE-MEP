@@ -38,6 +38,8 @@ export const toggleProductStatusBulk = (ids, isActive) =>
 
 // Categories APIs
 export const getCategories = () => apiGet(`${BASE}/categories`);
+export const createCategory = (name) =>
+  apiPost(`${BASE}/categories`, { name: (name || '').trim() });
 export const renameCategory = (oldName, newName) =>
   apiPut(`${BASE}/categories/rename`, {
     oldName: (oldName || '').trim(),
@@ -47,12 +49,35 @@ export const deleteCategory = (name) => apiDelete(`${BASE}/categories/${encodeUR
 
 // Brands APIs
 export const getBrands = () => apiGet(`${BASE}/brands`);
+export const createBrand = (name) => apiPost(`${BASE}/brands`, { name: (name || '').trim() });
 export const renameBrand = (oldName, newName) =>
   apiPut(`${BASE}/brands/rename`, {
     oldName: (oldName || '').trim(),
     newName: (newName || '').trim(),
   });
 export const deleteBrand = (name) => apiDelete(`${BASE}/brands/${encodeURIComponent(name)}`);
+
+// Locations APIs
+export const getProductLocations = () => apiGet('/api/locations');
+export const createProductLocation = (locationName, extra = {}) =>
+  apiPost('/api/locations', { locationName: (locationName || '').trim(), ...extra });
+export const renameProductLocation = (id, locationName, extra = {}) =>
+  apiPut(`/api/locations/${id}`, { locationName: (locationName || '').trim(), ...extra });
+export const deleteProductLocation = (id) => apiDelete(`/api/locations/${id}`);
+
+// Attribute Types APIs
+export const getAttributeTypes = () => apiGet('/api/products/attribute-types');
+export const createAttributeType = (typeName, typeCode) =>
+  apiPost('/api/products/attribute-types', {
+    typeName: (typeName || '').trim(),
+    ...(typeCode?.trim() ? { typeCode: typeCode.trim() } : {}),
+  });
+export const updateAttributeType = (id, data) =>
+  apiPut(`/api/products/attribute-types/${id}`, {
+    typeName: (data.typeName || '').trim(),
+    ...(data.typeCode?.trim() ? { typeCode: data.typeCode.trim() } : {}),
+  });
+export const deleteAttributeType = (id) => apiDelete(`/api/products/attribute-types/${id}`);
 
 const productService = {
   getProducts,
@@ -68,6 +93,16 @@ const productService = {
   getBrands,
   renameBrand,
   deleteBrand,
+  // Locations
+  getProductLocations,
+  createProductLocation,
+  renameProductLocation,
+  deleteProductLocation,
+  // Attribute Types
+  getAttributeTypes,
+  createAttributeType,
+  updateAttributeType,
+  deleteAttributeType,
 };
 
 export default productService;

@@ -8,13 +8,13 @@ import {
   getCategories,
   renameCategory,
   deleteCategory,
+  createCategory,
   getBrands,
   renameBrand,
   deleteBrand,
+  createBrand,
 } from '../../services/productService';
 
-// Gộp message + errors[] từ response lỗi API (vd 400/404 trong doc mới)
-// thành 1 chuỗi dễ đọc cho alert(), thay vì chỉ lấy mỗi `message`.
 const extractErrorMessage = (err, fallback) => {
   const msg = err?.data?.message;
   const errors = err?.data?.errors;
@@ -24,12 +24,18 @@ const extractErrorMessage = (err, fallback) => {
   return msg || fallback;
 };
 
+const TABS = [
+  { key: 'categories', label: 'Nhóm hàng' },
+  { key: 'brands', label: 'Thương hiệu' },
+];
+
 export const CategoryBrandManagerModal = ({ open, onClose, onSuccess }) => {
   const [activeTab, setActiveTab] = useState('categories');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [newNameInput, setNewNameInput] = useState('');
+  const [createName, setCreateName] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -37,7 +43,7 @@ export const CategoryBrandManagerModal = ({ open, onClose, onSuccess }) => {
       const res = activeTab === 'categories' ? await getCategories() : await getBrands();
       setItems(res?.success && Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
-      console.error('Lỗi lấy danh sách metadata:', err);
+      console.error('Lỗi lấy danh sách:', err);
       setItems([]);
     } finally {
       setLoading(false);
@@ -48,6 +54,23 @@ export const CategoryBrandManagerModal = ({ open, onClose, onSuccess }) => {
     if (open) loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, activeTab]);
+
+  const handleCreate = async () => {
+    const trimmed = (createName || '').trim();
+    if (!trimmed) return;
+    try {
+      const res =
+        activeTab === 'categories' ? await createCategory(trimmed) : await createBrand(trimmed);
+      if (res?.success) {
+        alert(res?.message || 'Tạo mới thành công');
+        setCreateName('');
+        loadData();
+        onSuccess?.();
+      }
+    } catch (err) {
+      alert(extractErrorMessage(err, 'Lỗi tạo mới'));
+    }
+  };
 
   const handleRename = async (oldName) => {
     const trimmed = (newNameInput || '').trim();
@@ -164,7 +187,7 @@ export const CategoryBrandManagerModal = ({ open, onClose, onSuccess }) => {
               type="button"
               onClick={() => handleDelete(item)}
               className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
-              title="Xóa / Gỡ khỏi sản phẩm"
+              title="Xóa"
             >
               <Icon name="delete" size={18} />
             </button>
@@ -186,30 +209,40 @@ export const CategoryBrandManagerModal = ({ open, onClose, onSuccess }) => {
       }
     >
       <div className="-mt-2 mb-5 flex gap-6 border-b border-slate-200 px-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab('categories')}
-          className={`relative pb-3 text-sm font-semibold transition-colors ${
-            activeTab === 'categories' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Nhóm hàng (Categories)
-          {activeTab === 'categories' && (
-            <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-t-md bg-blue-600" />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('brands')}
-          className={`relative pb-3 text-sm font-semibold transition-colors ${
-            activeTab === 'brands' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Thương hiệu (Brands)
-          {activeTab === 'brands' && (
-            <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-t-md bg-blue-600" />
-          )}
-        </button>
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => {
+              setActiveTab(tab.key);
+              setEditingName('');
+              setCreateName('');
+            }}
+            className={`relative pb-3 text-sm font-semibold transition-colors ${
+              activeTab === tab.key ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {tab.label}
+            {activeTab === tab.key && (
+              <span className="absolute bottom-0 left-0 h-0.5 w-full rounded-t-md bg-blue-600" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-[#004785] focus:outline-none"
+          placeholder={
+            activeTab === 'categories' ? 'Nhập tên nhóm hàng mới...' : 'Nhập tên thương hiệu mới...'
+          }
+          value={createName}
+          onChange={(e) => setCreateName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+        />
+        <Button variant="primary" onClick={handleCreate}>
+          Thêm mới
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-slate-200">
@@ -217,7 +250,7 @@ export const CategoryBrandManagerModal = ({ open, onClose, onSuccess }) => {
           columns={columns}
           data={items}
           loading={loading}
-          emptyMessage="Chưa có dữ liệu nào."
+          emptyMessage={`Chưa có ${activeTab === 'categories' ? 'nhóm hàng' : 'thương hiệu'} nào.`}
         />
       </div>
     </Modal>

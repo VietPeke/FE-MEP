@@ -34,6 +34,25 @@ const InfoTabPanel = ({ row, loading }) => {
     return <div className="p-8 text-center text-slate-400">Đang tải thông tin chi tiết...</div>;
   return (
     <div>
+      {row.minimumStock > 0 && (row.actualStock ?? row.stock ?? 0) <= row.minimumStock && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          <svg
+            className="h-5 w-5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+            />
+          </svg>
+          Tồn kho thấp ({row.actualStock ?? row.stock ?? 0}), dưới ngưỡng tối thiểu (
+          {row.minimumStock})
+        </div>
+      )}
       <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:gap-8">
         <div className="h-36 w-36 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
           <img
@@ -65,29 +84,47 @@ const InfoTabPanel = ({ row, loading }) => {
         </div>
       </div>
       <div className="mb-6 grid grid-cols-1 gap-x-12 gap-y-6 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ['Mã hàng', row.productCode || row.id],
-          ['Mã vạch', row.barcode || 'Chưa có'],
-          ['Tồn thực tế', row.actualStock ?? row.stock ?? 0],
-          ['Tồn khả dụng', row.availableStock ?? row.stock ?? 0],
-          ['Giá vốn', `${fmtMoney(row.costPrice)} đ`],
-          ['Giá bán', `${fmtMoney(row.salePrice)} đ`],
-          ['Thương hiệu', row.brandName || row.brand || 'Chưa có'],
-          ['Vị trí', row.shelfLocation || row.location || 'Chưa có'],
-          ['Trọng lượng', row.weight ? `${row.weight} ${row.weightUnit || 'g'}` : 'Chưa có'],
-          ['Kích thước', row.specification || row.specificationDetail || 'Chưa có'],
-        ].map(([label, value]) => (
-          <div key={label} className="space-y-1 border-b border-slate-100 pb-3">
-            <p className="text-[11px] font-bold uppercase tracking-tighter text-slate-400">
-              {label}
-            </p>
-            <p
-              className={`text-sm font-bold ${value === 'Chưa có' ? 'text-slate-400' : 'text-slate-800'}`}
-            >
-              {value}
-            </p>
-          </div>
-        ))}
+        {(() => {
+          // Compute a sensible display value for "Kích thước"
+          const spec = row.specification || '';
+          const dimsFromFields = [row.width, row.length, row.height].filter(Boolean).join(' × ');
+          const hasDimsFromFields = Boolean(dimsFromFields);
+          const hasSizeRange = Boolean(row.sizeRange);
+          const specLooksLikeDim = /[×x]|\b(mm|cm|m|in|inch)\b/i.test(spec);
+          const dimValue = hasDimsFromFields
+            ? dimsFromFields + (row.sizeUnit ? ` ${row.sizeUnit}` : '')
+            : hasSizeRange
+              ? row.sizeRange + (row.sizeUnit ? ` ${row.sizeUnit}` : '')
+              : spec && specLooksLikeDim
+                ? spec
+                : null;
+
+          const items = [
+            ['Mã hàng', row.productCode || row.id],
+            ['Mã vạch', row.barcode || 'Chưa có'],
+            ['Tồn thực tế', row.actualStock ?? row.stock ?? 0],
+            ['Tồn khả dụng', row.availableStock ?? row.stock ?? 0],
+            ['Giá vốn', `${fmtMoney(row.costPrice)} đ`],
+            ['Giá bán', `${fmtMoney(row.salePrice)} đ`],
+            ['Thương hiệu', row.brandName || row.brand || 'Chưa có'],
+            ['Vị trí', row.shelfLocation || row.location || 'Chưa có'],
+            ['Trọng lượng', row.weight ? `${row.weight} ${row.weightUnit || 'g'}` : 'Chưa có'],
+            ['Kích thước', dimValue || 'Chưa có'],
+          ];
+
+          return items.map(([label, value]) => (
+            <div key={label} className="space-y-1 border-b border-slate-100 pb-3">
+              <p className="text-[11px] font-bold uppercase tracking-tighter text-slate-400">
+                {label}
+              </p>
+              <p
+                className={`text-sm font-bold ${value === 'Chưa có' ? 'text-slate-400' : 'text-slate-800'}`}
+              >
+                {value}
+              </p>
+            </div>
+          ));
+        })()}
       </div>
     </div>
   );
@@ -115,12 +152,6 @@ const DescTabPanel = ({ row, loading, onEdit }) => {
     </div>
   );
 };
-
-const PlaceholderTab = ({ title }) => (
-  <div className="flex min-h-[200px] items-center justify-center text-sm text-slate-400">
-    {title} - Đang phát triển
-  </div>
-);
 
 const StatusToggleModal = ({ open, onClose, onConfirm, isActive }) => {
   if (!open) return null;
@@ -235,8 +266,6 @@ export const ProductDetailPanel = ({ row, onEdit, onDelete, onToggleStatus }) =>
   const TABS = [
     { key: 'info', label: 'Thông tin' },
     { key: 'desc', label: 'Mô tả, ghi chú' },
-    { key: 'stock-card', label: 'Thẻ kho' },
-    { key: 'inventory', label: 'Tồn kho' },
   ];
   const productId = row?.id || row?.productId;
 
@@ -247,7 +276,22 @@ export const ProductDetailPanel = ({ row, onEdit, onDelete, onToggleStatus }) =>
       setLoading(true);
       try {
         const res = await getProduct(productId);
-        if (res?.success && res?.data) setFullData((prev) => ({ ...prev, ...res.data }));
+        if (res?.success && res?.data) {
+          const apiData = res.data;
+          // Map PascalCase từ backend C# sang lowercase frontend
+          setFullData((prev) => ({
+            ...prev,
+            ...apiData,
+            width: apiData.width ?? apiData.Width ?? prev.width,
+            length: apiData.length ?? apiData.Length ?? prev.length,
+            height: apiData.height ?? apiData.Height ?? prev.height,
+            sizeUnit: apiData.sizeUnit || apiData.SizeUnit || prev.sizeUnit || 'mm',
+            weight: apiData.weight ?? apiData.Weight ?? prev.weight,
+            weightUnit: apiData.weightUnit || apiData.WeightUnit || prev.weightUnit || 'g',
+            specification:
+              apiData.specification || apiData.Specification || prev.specification || '',
+          }));
+        }
       } catch (err) {
         console.error('Lỗi tải chi tiết:', err);
       } finally {
@@ -274,8 +318,6 @@ export const ProductDetailPanel = ({ row, onEdit, onDelete, onToggleStatus }) =>
       <div className="mt-6">
         {activeTab === 'info' && <InfoTabPanel row={fullData} loading={loading} />}
         {activeTab === 'desc' && <DescTabPanel row={fullData} loading={loading} onEdit={onEdit} />}
-        {activeTab === 'stock-card' && <PlaceholderTab title="Thẻ kho" />}
-        {activeTab === 'inventory' && <PlaceholderTab title="Tồn kho" />}
       </div>
       {activeTab === 'info' && (
         <BottomToolbar

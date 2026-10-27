@@ -28,6 +28,7 @@ export const ENDPOINTS = {
     STAFF_UNASSIGN_BRANCH: (id, branchId) => `/api/owner/staffs/${id}/unassign-branch/${branchId}`,
     STAFF_TOGGLE_STATUS: (id) => `/api/owner/staffs/${id}/toggle-status`,
     STAFF_AVAILABLE_PERMISSIONS: '/api/owner/staffs/available-permissions',
+    STAFF_CHECK_RELATIONS: (id) => `/api/owner/staffs/${id}/check-relations`,
 
     // Discount Tiers (Chiết khấu theo giá trị đơn hàng)
     ORDER_DISCOUNT_TIERS: '/api/order-discount-tiers',
@@ -47,6 +48,18 @@ export const ENDPOINTS = {
     DELETE_PRODUCT: (id) => `/api/Products/${id}`,
     TOGGLE_PRODUCT_STATUS: (id) => `/api/Products/${id}/toggle-status`,
     TOGGLE_PRODUCT_STATUS_BULK: '/api/Products/toggle-status-bulk',
+
+    // ================= Locations =================
+    GET_PRODUCT_LOCATIONS: '/api/locations',
+    CREATE_PRODUCT_LOCATION: '/api/locations',
+    RENAME_PRODUCT_LOCATION: (id) => `/api/locations/${id}`,
+    DELETE_PRODUCT_LOCATION: (id) => `/api/locations/${id}`,
+
+    // ================= Attribute Types =================
+    GET_ATTRIBUTE_TYPES: '/api/products/attribute-types',
+    CREATE_ATTRIBUTE_TYPE: '/api/products/attribute-types',
+    UPDATE_ATTRIBUTE_TYPE: (id) => `/api/products/attribute-types/${id}`,
+    DELETE_ATTRIBUTE_TYPE: (id) => `/api/products/attribute-types/${id}`,
 
     // ================= Suppliers =================
     GET_SUPPLIERS: '/api/suppliers',
@@ -95,7 +108,6 @@ export const ENDPOINTS = {
     REJECT_INVENTORY_CHECK: (id) => `/api/InventoryCheck/${id}/reject`,
     GET_NOTIFICATIONS: '/api/InventoryCheck/notifications',
     MARK_NOTIFICATION_READ: '/api/InventoryCheck/notifications/read',
-    INVENTORY_SUMMARY_REPORT: '/api/inventory/summary-report',
 
     // ================= Stock =================
     GET_STOCK: '/api/Stock',
@@ -154,6 +166,7 @@ export const ENDPOINTS = {
     CREATE_PAYMENT: (invoiceId) => `/pos/invoices/${invoiceId}/payments`,
     GET_PAYMENT_QR: (paymentId) => `/pos/payments/${paymentId}/qr`,
     CONFIRM_TRANSFER: (paymentId) => `/pos/payments/${paymentId}/confirm-transfer`,
+    CANCEL_PAYMENT: (paymentId) => `/pos/payments/${paymentId}/cancel`,
 
     // --- Shift Management ---
     START_SHIFT: '/pos/shifts/start',
@@ -189,18 +202,21 @@ export const ENDPOINTS = {
     DASHBOARD_EVENTS: '/api/admin/dashboard/recent-events',
     DASHBOARD_EXPORT: '/api/admin/dashboard/export',
 
-    // Owner Accounts (Quản lý Chủ cửa hàng)
-    OWNER_LIST: '/api/admin/owners',
-    OWNER_DETAIL: (id) => `/api/admin/owners/${id}`,
-    OWNER_CREATE: '/api/admin/owners',
-    OWNER_UPDATE: (id) => `/api/admin/owners/${id}`,
-    OWNER_STATUS: (id) => `/api/admin/owners/${id}/status`,
-    OWNER_BAN: (id) => `/api/admin/owners/${id}/ban`,
+    // User Accounts (Quản lý Người dùng)
+    USER_LIST: '/api/admin/users',
+    USER_DETAIL: (id) => `/api/admin/users/${id}`,
+    USER_CREATE: '/api/admin/users',
+    USER_UPDATE: (id) => `/api/admin/users/${id}`,
+    USER_ROLES: (id) => `/api/admin/users/${id}/roles`,
+    USER_STATUS: (id) => `/api/admin/users/${id}/status`,
+    USER_RESET_PASSWORD: (id) => `/api/admin/users/${id}/reset-password`,
+    USER_ACTIVITIES: (id) => `/api/admin/users/${id}/activities`,
 
-    // RBAC - Phân quyền toàn cục
-    RBAC_PERMISSIONS: '/api/admin/rbac/permissions',
-    RBAC_ROLES: '/api/admin/rbac/roles',
-    RBAC_ROLE_PERMISSIONS: (id) => `/api/admin/rbac/roles/${id}/permissions`,
+    // Roles & Permissions (Quản lý Quyền)
+    ROLE_LIST: '/api/admin/roles',
+    ROLE_PERMISSIONS: '/api/admin/roles/permissions',
+    ROLE_MATRIX: '/api/admin/roles/permission-matrix',
+    ROLE_UPDATE_PERMISSIONS: (id) => `/api/admin/roles/${id}/permissions`,
 
     // Store Approvals
     APPROVAL_LIST: '/api/admin/store-approvals',
@@ -231,6 +247,11 @@ export const ENDPOINTS = {
     REFRESH_TOKEN: '/refresh',
     GET_PROFILE: '/profile',
     UPDATE_PROFILE: '/profile',
+  },
+
+  // ============ CHATBOT (Trợ lý AI) ============
+  CHATBOT: {
+    SEND_MESSAGE: '/api/chatbot/message',
   },
 
   // ============ GOODS ISSUE (Xuất Kho) ============
