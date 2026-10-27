@@ -65,14 +65,16 @@ const StaffTable = ({ staffs, loading, currentUserId, onViewDetail, onToggleStat
               onClick={() => onViewDetail(staff)}
               title="Xem chi tiết & Cập nhật"
             />
-            <IconButton
-              icon={(props) => <Icon name="delete" {...props} />}
-              variant="danger"
-              space="admin"
-              disabled={isSelf}
-              onClick={() => !isSelf && onDelete(staff.userId)}
-              title={isSelf ? 'Không thể tự xóa' : 'Xóa nhân viên'}
-            />
+            {!isSelf && (
+              <IconButton
+                icon={(props) => <Icon name="delete" {...props} />}
+                variant="outline"
+                space="admin"
+                onClick={() => onDelete(staff.userId)}
+                title="Xóa nhân viên"
+                className="border-red-200 text-red-600 hover:bg-red-50"
+              />
+            )}
           </div>
         );
       },
