@@ -185,8 +185,7 @@ const StaffModal = ({ isOpen, onClose, staff, permissions = [], onSave }) => {
           </span>
           {staff && (
             <span className="mt-1 text-xs font-normal text-slate-500">
-              {staff.branchName ? `Chi nhánh: ${staff.branchName} — ` : ''}Bạn có thể kiểm tra và
-              chỉnh sửa thông tin hoặc phân quyền trực tiếp tại đây.
+              Bạn có thể kiểm tra và chỉnh sửa thông tin hoặc phân quyền trực tiếp tại đây.
             </span>
           )}
         </div>

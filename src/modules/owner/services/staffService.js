@@ -5,12 +5,11 @@ import ENDPOINTS from '../../../services/endpoints';
  * Lấy danh sách nhân viên do Owner hiện tại tạo (CreatedBy == ownerId)
  * @param {Object} params - { page = 1, pageSize = 20, search }
  */
-export const getStaffs = ({ page = 1, pageSize = 20, search = '', status = '' } = {}) => {
+export const getStaffs = ({ page = 1, pageSize = 20, search = '' } = {}) => {
   const queryParams = new URLSearchParams();
   if (page) queryParams.set('page', page);
   if (pageSize) queryParams.set('pageSize', pageSize);
   if (search && search.trim() !== '') queryParams.set('search', search.trim());
-  if (status) queryParams.set('status', status);
 
   const queryString = queryParams.toString();
   return apiGet(`${ENDPOINTS.OWNER.STAFFS}${queryString ? `?${queryString}` : ''}`);
@@ -60,15 +59,7 @@ export const toggleStaffStatus = (id) => {
 };
 
 /**
- * Kiểm tra quan hệ dữ liệu của nhân viên trước khi xóa mềm
- * @param {string} id - GUID của nhân viên
- */
-export const checkStaffRelations = (id) => {
-  return apiGet(ENDPOINTS.OWNER.STAFF_CHECK_RELATIONS(id));
-};
-
-/**
- * Xóa mềm nhân viên (Status = DELETED)
+ * Xóa cứng nhân viên ra khỏi hệ thống
  * @param {string} id - GUID của nhân viên
  */
 export const deleteStaff = (id) => {
