@@ -32,23 +32,17 @@ const normalizeExportRow = (item, index) => {
     productNames.length > 1
       ? `${productNames[0]} (+${productNames.length - 1} SP khác)`
       : productNames[0] || 'Sản phẩm xuất kho';
-  const ticketCode = item?.ticketCode || `EX-${index + 1}`;
-  let partyName = '';
-  try {
-    partyName = localStorage.getItem(`outward_party_${ticketCode}`) || '';
-  } catch {}
 
   return {
     id: item?.stockTicketId || item?.id || `EXP-${index + 1}`,
     stockTicketId: item?.stockTicketId || item?.id,
-    ticketCode,
+    ticketCode: item?.ticketCode || `EX-${index + 1}`,
     productName: label,
     quantity: totalQuantity || item?.quantity || 0,
     date: item?.createdAt || item?.Date || '',
     reason: item?.reason || item?.Reason || '',
-    status: item?.status || item?.Status || 'COMPLETED',
+    status: item?.status || 'COMPLETED',
     cancelReason: item?.cancelReason || '',
-    partyName,
   };
 };
 
@@ -57,7 +51,9 @@ const getItemKey = (item) => item.branchProductId || item.productId || item.id |
 const REASON_OPTIONS = [
   { value: 'Xuất bán hàng', label: 'Xuất bán hàng' },
   { value: 'Trả hàng nhà cung cấp', label: 'Trả hàng nhà cung cấp' },
+  { value: 'Xuất hủy / Hao hụt', label: 'Xuất hủy / Hao hụt' },
   { value: 'Xuất nội bộ / Điều chuyển', label: 'Xuất nội bộ / Điều chuyển' },
+  { value: 'Xuất nguyên vật liệu sản xuất', label: 'Xuất nguyên vật liệu sản xuất' },
   { value: '__other__', label: 'Khác...' },
 ];
 
@@ -127,7 +123,7 @@ export const StockExport = () => {
   const loadData = async (filterParams = {}) => {
     setIsLoading(true);
     try {
-      const queryParams = { pageNumber: 1, pageSize: 50, ...filterParams };
+      const queryParams = { pageNumber: 1, pageSize: 100, ...filterParams };
 
       // Load sản phẩm - độc lập với lịch sử phiếu
       try {
@@ -200,18 +196,6 @@ export const StockExport = () => {
     return Number(stock);
   };
 
-  // Lấy đơn vị tính của sản phẩm
-  const getUnit = (p) =>
-    p.baseUnit?.name ||
-    p.baseUnit?.Name ||
-    p.BaseUnit?.name ||
-    p.BaseUnit?.Name ||
-    p.unit ||
-    p.Unit ||
-    p.unitName ||
-    p.UnitName ||
-    '';
-
   // Thêm sản phẩm
   const addItem = useCallback(() => {
     const id = selectedProductId;
@@ -232,7 +216,7 @@ export const StockExport = () => {
 
       if (newQty > stock) {
         setStatusMessage(
-          `Lỗi: Vượt tồn kho! "${product.productName || product.ProductName}" chỉ còn ${stock} ${getUnit(product)}`
+          `Lỗi: Vượt tồn kho! "${product.productName || product.ProductName}" chỉ còn ${stock} ${product.unit || ''}`
         );
         return prev;
       }
@@ -247,10 +231,9 @@ export const StockExport = () => {
           productId: getItemKey(product),
           productCode: product.productCode || product.ProductCode || '',
           productName: product.productName || product.ProductName || '',
-          unit: getUnit(product),
+          unit: product.unit || product.unitName || '',
           quantity: qty,
           maxStock: stock,
-          unitPrice: 0,
         },
       ];
     });
@@ -284,16 +267,13 @@ export const StockExport = () => {
     );
   };
 
-  const updateItemPrice = (key, price) => {
-    const cleaned = String(price).replace(/[^0-9]/g, '');
-    setItems((prev) =>
-      prev.map((i) =>
-        getItemKey(i) === key ? { ...i, unitPrice: cleaned ? Number(cleaned) : 0 } : i
-      )
-    );
-  };
-
-  const isSale = reasonType === 'Xuất bán hàng';
+  const totals = useMemo(
+    () => ({
+      totalLines: items.length,
+      totalQuantity: items.reduce((sum, i) => sum + Number(i.quantity || 0), 0),
+    }),
+    [items]
+  );
 
   const summary = useMemo(() => {
     const qty = exports.reduce((total, item) => total + Number(item.quantity || 0), 0);
@@ -332,18 +312,6 @@ export const StockExport = () => {
       return `Sản phẩm "${invalidItem.productName}" có số lượng không hợp lệ (phải > 0)`;
     }
 
-    // 6. Kiểm tra đơn giá khi xuất bán
-    if (reasonType === 'Xuất bán hàng') {
-      const noPrice = items.find((i) => !i.unitPrice || Number(i.unitPrice) <= 0);
-      if (noPrice) {
-        return `Sản phẩm "${noPrice.productName}" chưa có đơn giá hoặc đơn giá không hợp lệ`;
-      }
-      const lowPrice = items.find((i) => Number(i.unitPrice) < 1000);
-      if (lowPrice) {
-        return `Sản phẩm "${lowPrice.productName}" có đơn giá tối thiểu là 1.000đ`;
-      }
-    }
-
     return null;
   };
 
@@ -372,20 +340,11 @@ export const StockExport = () => {
         items: items.map((i) => ({
           branchProductId: getItemKey(i),
           quantity: Number(i.quantity || 0),
-          ...(isSale && { unitPrice: Number(i.unitPrice || 0) }),
         })),
       };
       setStatusMessage('Đang tạo phiếu xuất kho...');
       const createRes = await createOutwardInventory(payload);
       const ticketId = createRes?.data?.ticketId || createRes?.data?.stockTicketId;
-      const newTicketCode = createRes?.data?.ticketCode || ticketId;
-
-      // Lưu tên đối tượng xuất vào localStorage vì API không lưu thông tin này
-      if (newTicketCode && targetName.trim()) {
-        try {
-          localStorage.setItem(`outward_party_${newTicketCode}`, targetName.trim());
-        } catch {} // eslint-disable-line no-empty
-      }
 
       if (ticketId) {
         if (isDraft) {
@@ -539,14 +498,6 @@ export const StockExport = () => {
                   onChange={(e) => {
                     setTargetType(e.target.value);
                     setTargetName('');
-                    // Đồng bộ lý do xuất kho theo đối tượng
-                    const targetReasonMap = {
-                      'Khách hàng': 'Xuất bán hàng',
-                      'Nhà cung cấp': 'Trả hàng nhà cung cấp',
-                      'Nội bộ': 'Xuất nội bộ / Điều chuyển',
-                    };
-                    const mapped = targetReasonMap[e.target.value];
-                    if (mapped && reasonType !== '__other__') setReasonType(mapped);
                   }}
                 >
                   {TARGET_OPTIONS.map((opt) => (
@@ -614,17 +565,6 @@ export const StockExport = () => {
                 onChange={(e) => {
                   setReasonType(e.target.value);
                   if (e.target.value !== '__other__') setReasonOther('');
-                  // Đồng bộ đối tượng xuất theo lý do
-                  const reasonTargetMap = {
-                    'Xuất bán hàng': 'Khách hàng',
-                    'Trả hàng nhà cung cấp': 'Nhà cung cấp',
-                    'Xuất nội bộ / Điều chuyển': 'Nội bộ',
-                  };
-                  const mapped = reasonTargetMap[e.target.value];
-                  if (mapped && targetType !== '__other__') {
-                    setTargetType(mapped);
-                    setTargetName('');
-                  }
                 }}
               >
                 {REASON_OPTIONS.map((opt) => (
@@ -663,7 +603,7 @@ export const StockExport = () => {
                 Danh sách sản phẩm xuất <span className="text-red-500">*</span>
               </label>
               <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                {items.length} mặt hàng
+                {items.length} mặt hàng &middot; SL: {totals.totalQuantity}
               </span>
             </div>
 
@@ -753,7 +693,9 @@ export const StockExport = () => {
                                 <span
                                   className={`shrink-0 text-xs font-medium ${stock <= 0 ? 'text-red-500' : stock < 10 ? 'text-amber-600' : 'text-emerald-600'}`}
                                 >
-                                  {stock <= 0 ? 'Hết hàng' : `Còn ${stock} ${getUnit(product)}`}
+                                  {stock <= 0
+                                    ? 'Hết hàng'
+                                    : `Còn ${stock} ${product.unit || product.unitName || ''}`}
                                 </span>
                               </button>
                             );
@@ -835,7 +777,7 @@ export const StockExport = () => {
                   const prod = products.find((p) => getItemKey(p) === selectedProductId);
                   if (!prod) return null;
                   const stock = getProductStock(prod);
-                  const unit = getUnit(prod);
+                  const unit = prod.unit || prod.unitName || '';
                   const isOver = selectedQuantity && Number(selectedQuantity) > stock;
                   return (
                     <div className="mt-2 flex items-center gap-2 text-[11px]">
@@ -871,14 +813,14 @@ export const StockExport = () => {
 
             {/* Bảng sản phẩm đã thêm */}
             {items.length > 0 ? (
-              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-                <table className="w-full table-fixed text-sm">
+              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
                       <th className="w-10 py-3 pl-5 pr-2 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
                         #
                       </th>
-                      <th className="w-24 px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      <th className="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
                         Mã SP
                       </th>
                       <th className="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -893,17 +835,7 @@ export const StockExport = () => {
                       <th className="w-32 px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
                         Số lượng xuất
                       </th>
-                      {isSale && (
-                        <>
-                          <th className="w-28 px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                            Đơn giá
-                          </th>
-                          <th className="w-28 px-2 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                            Thành tiền
-                          </th>
-                        </>
-                      )}
-                      <th className="w-10 py-3 pl-1 pr-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      <th className="w-12 py-3 pl-2 pr-5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
                         Xóa
                       </th>
                     </tr>
@@ -925,19 +857,19 @@ export const StockExport = () => {
                               {idx + 1}
                             </span>
                           </td>
-                          <td className="w-24 truncate px-3 py-3">
+                          <td className="px-3 py-3">
                             <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-medium text-slate-600">
                               {item.productCode || 'N/A'}
                             </span>
                           </td>
-                          <td className="truncate px-3 py-3">
+                          <td className="px-3 py-3">
                             <div className="flex items-center gap-2.5">
                               <div
                                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isOverStock ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-400'}`}
                               >
                                 <Icon name="inventory_2" size={16} />
                               </div>
-                              <span className="truncate text-[13px] font-semibold text-slate-800">
+                              <span className="text-[13px] font-semibold text-slate-800">
                                 {item.productName}
                               </span>
                             </div>
@@ -986,32 +918,7 @@ export const StockExport = () => {
                               </p>
                             )}
                           </td>
-                          {isSale && (
-                            <>
-                              <td className="px-2 py-3 text-center">
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  placeholder="0"
-                                  className="h-8 w-24 rounded-lg border border-slate-200 bg-white px-2 text-right text-[13px] font-semibold text-slate-800 outline-none focus:border-blue-500"
-                                  value={
-                                    item.unitPrice
-                                      ? Number(item.unitPrice).toLocaleString('vi-VN')
-                                      : ''
-                                  }
-                                  onChange={(e) =>
-                                    updateItemPrice(key, e.target.value.replace(/[^0-9]/g, ''))
-                                  }
-                                />
-                              </td>
-                              <td className="max-w-[160px] truncate px-2 py-3 text-right font-semibold text-blue-700">
-                                {(
-                                  Number(item.quantity || 0) * Number(item.unitPrice || 0)
-                                ).toLocaleString('vi-VN')}
-                              </td>
-                            </>
-                          )}
-                          <td className="py-3 pl-1 pr-3 text-center">
+                          <td className="py-3 pl-2 pr-5 text-center">
                             <button
                               type="button"
                               onClick={() => removeItem(key)}

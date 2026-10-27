@@ -914,8 +914,7 @@ const OrderHistory = () => {
                         {d.customer ? d.customer.name : 'Khách lẻ'}
                       </p>
                       <p className="text-xs text-slate-400">
-                        {d.items.reduce((sum, item) => sum + (item.quantity || 1), 0)} món -{' '}
-                        {formatCurrency(d.total)}
+                        {d.items.length} mon - {formatCurrency(d.total)}
                       </p>
                     </div>
                   </div>

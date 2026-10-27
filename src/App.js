@@ -18,10 +18,6 @@ import ServerError from './pages/errors/ServerError';
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 
-// Account settings
-const AccountSettingsPage = lazy(() => import('./pages/AccountSettings/AccountSettingsPage'));
-const AccountSettingsLayout = lazy(() => import('./pages/AccountSettings/AccountSettingsLayout'));
-
 // Inventory Module
 const InventoryLayout = lazy(() => import('./modules/inventory/layouts/InventoryLayout'));
 const InventoryDashboard = lazy(() => import('./modules/inventory/pages/InventoryDashboard'));
@@ -29,6 +25,9 @@ const InventoryProduct = lazy(() => import('./modules/inventory/pages/InventoryP
 const StockImport = lazy(() => import('./modules/inventory/pages/StockImport'));
 const StockExport = lazy(() => import('./modules/inventory/pages/StockExport'));
 const InventoryReports = lazy(() => import('./modules/inventory/pages/InventoryReports'));
+const InventorySummaryReport = lazy(
+  () => import('./modules/inventory/pages/InventorySummaryReport')
+);
 const InventoryTransactionManagement = lazy(
   () => import('./modules/inventory/pages/InventoryTransactionManagement')
 );
@@ -60,9 +59,7 @@ const ReturnOrderPage = lazy(() => import('./modules/pos/pages/ReturnOrderPage')
 // Admin Module
 const AdminLayout = lazy(() => import('./modules/admin/layouts/AdminLayout'));
 const AdminDashboard = lazy(() => import('./modules/admin/pages/AdminDashboard'));
-const AdminUserManagement = lazy(() => import('./modules/admin/pages/AdminUserManagement'));
-const AdminUserDetail = lazy(() => import('./modules/admin/pages/AdminUserDetail'));
-const AdminRoleManagement = lazy(() => import('./modules/admin/pages/AdminRoleManagement'));
+const OwnerAccountsManagement = lazy(() => import('./modules/admin/pages/OwnerAccountsManagement'));
 const StoreApprovals = lazy(() => import('./modules/admin/pages/StoreApprovals'));
 const SystemNotifications = lazy(() => import('./modules/admin/pages/SystemNotifications'));
 const SystemLog = lazy(() => import('./modules/admin/pages/SystemLog'));
@@ -106,16 +103,6 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
 
           {/* PRIVATE & PROTECTED ROUTES */}
-          {/* ACCOUNT SETTINGS ROUTE */}
-          <Route
-            element={
-              <PrivateRoute allowedRoles={['Owner', 'SalesStaff', 'InventoryStaff', 'Admin']} />
-            }
-          >
-            <Route path="/account-settings" element={<AccountSettingsLayout />}>
-              <Route index element={<AccountSettingsPage />} />
-            </Route>
-          </Route>
 
           {/* MODULE POS */}
           <Route element={<PrivateRoute allowedRoles={['Owner', 'SalesStaff']} />}>
@@ -161,6 +148,7 @@ function App() {
               <Route path="import" element={<StockImport />} />
               <Route path="export" element={<StockExport />} />
               <Route path="reports" element={<InventoryReports />} />
+              <Route path="inventory-summary" element={<InventorySummaryReport />} />
               <Route path="inventory-check" element={<InventoryCheckList />} />
               <Route path="goods-issue" element={<GoodsIssueList />} />
               <Route path="goods-issue/create" element={<GoodsIssueCreate />} />
@@ -172,9 +160,7 @@ function App() {
           <Route element={<PrivateRoute allowedRoles={['Admin']} />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUserManagement />} />
-              <Route path="users/:id" element={<AdminUserDetail />} />
-              <Route path="roles" element={<AdminRoleManagement />} />
+              <Route path="users" element={<OwnerAccountsManagement />} />
               <Route path="approvals" element={<StoreApprovals />} />
               <Route path="notifications" element={<SystemNotifications />} />
               <Route path="logs" element={<SystemLog />} />

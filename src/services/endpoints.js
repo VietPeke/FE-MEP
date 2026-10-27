@@ -95,6 +95,7 @@ export const ENDPOINTS = {
     REJECT_INVENTORY_CHECK: (id) => `/api/InventoryCheck/${id}/reject`,
     GET_NOTIFICATIONS: '/api/InventoryCheck/notifications',
     MARK_NOTIFICATION_READ: '/api/InventoryCheck/notifications/read',
+    INVENTORY_SUMMARY_REPORT: '/api/inventory/summary-report',
 
     // ================= Stock =================
     GET_STOCK: '/api/Stock',
@@ -188,21 +189,18 @@ export const ENDPOINTS = {
     DASHBOARD_EVENTS: '/api/admin/dashboard/recent-events',
     DASHBOARD_EXPORT: '/api/admin/dashboard/export',
 
-    // User Accounts (Quản lý Người dùng)
-    USER_LIST: '/api/admin/users',
-    USER_DETAIL: (id) => `/api/admin/users/${id}`,
-    USER_CREATE: '/api/admin/users',
-    USER_UPDATE: (id) => `/api/admin/users/${id}`,
-    USER_ROLES: (id) => `/api/admin/users/${id}/roles`,
-    USER_STATUS: (id) => `/api/admin/users/${id}/status`,
-    USER_RESET_PASSWORD: (id) => `/api/admin/users/${id}/reset-password`,
-    USER_ACTIVITIES: (id) => `/api/admin/users/${id}/activities`,
+    // Owner Accounts (Quản lý Chủ cửa hàng)
+    OWNER_LIST: '/api/admin/owners',
+    OWNER_DETAIL: (id) => `/api/admin/owners/${id}`,
+    OWNER_CREATE: '/api/admin/owners',
+    OWNER_UPDATE: (id) => `/api/admin/owners/${id}`,
+    OWNER_STATUS: (id) => `/api/admin/owners/${id}/status`,
+    OWNER_BAN: (id) => `/api/admin/owners/${id}/ban`,
 
-    // Roles & Permissions (Quản lý Quyền)
-    ROLE_LIST: '/api/admin/roles',
-    ROLE_PERMISSIONS: '/api/admin/roles/permissions',
-    ROLE_MATRIX: '/api/admin/roles/permission-matrix',
-    ROLE_UPDATE_PERMISSIONS: (id) => `/api/admin/roles/${id}/permissions`,
+    // RBAC - Phân quyền toàn cục
+    RBAC_PERMISSIONS: '/api/admin/rbac/permissions',
+    RBAC_ROLES: '/api/admin/rbac/roles',
+    RBAC_ROLE_PERMISSIONS: (id) => `/api/admin/rbac/roles/${id}/permissions`,
 
     // Store Approvals
     APPROVAL_LIST: '/api/admin/store-approvals',
@@ -233,11 +231,6 @@ export const ENDPOINTS = {
     REFRESH_TOKEN: '/refresh',
     GET_PROFILE: '/profile',
     UPDATE_PROFILE: '/profile',
-  },
-
-  // ============ CHATBOT (Trợ lý AI) ============
-  CHATBOT: {
-    SEND_MESSAGE: '/api/chatbot/message',
   },
 
   // ============ GOODS ISSUE (Xuất Kho) ============

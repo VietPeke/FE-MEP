@@ -39,24 +39,6 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
     };
   }, [isOpen, onClose]);
 
-  // Khi Drawer mở, làm mờ/khóa nút thu gọn sidebar để không che UI chính
-  useEffect(() => {
-    try {
-      const toggleBtn = document.querySelector('.inventory-sidebar-toggle');
-      if (!toggleBtn) return;
-      if (isOpen) {
-        toggleBtn.classList.add('opacity-30', 'pointer-events-none');
-      } else {
-        toggleBtn.classList.remove('opacity-30', 'pointer-events-none');
-      }
-      return () => {
-        toggleBtn.classList.remove('opacity-30', 'pointer-events-none');
-      };
-    } catch (e) {
-      // ignore
-    }
-  }, [isOpen]);
-
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -77,6 +59,7 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
     if (!printWindow) return;
 
     const typeLabel = transaction.type === 'INWARD' ? 'PHIẾU NHẬP KHO' : 'PHIẾU XUẤT KHO';
+    const partyLabel = transaction.type === 'INWARD' ? 'Nhà cung cấp' : 'Khách hàng';
 
     const itemsHtml = transaction.items
       ?.map(
@@ -135,6 +118,7 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
     <div class="header-left">
       <h1>CÔNG TY TNHH ABC</h1>
       <p>Địa chỉ: 12 Nguyễn Văn Bảo, P.4, Gò Vấp, TP.HCM</p>
+      {/* <p>Chi nhánh: ${transaction.branchName || '-'}</p> */}
     </div>
     <div class="header-right">
       <p class="bold">Mã phiếu: ${transaction.ticketCode || '-'}</p>
@@ -148,7 +132,7 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
   </div>
 
   <div class="info">
-    <div class="info-full"><span class="bold">Đối tượng:</span> ${(transaction.partyName || '-').replace(/^.*?:\s*/g, '')}</div>
+    <div class="info-full"><span class="bold">${partyLabel}:</span> ${transaction.partyName || '-'}</div>
     <div class="info-full"><span class="bold">Lý do / Ghi chú:</span> ${transaction.reason || transaction.note || '-'}</div>
   </div>
 
@@ -294,10 +278,13 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500">Đối tượng</p>
+                    <p className="text-xs text-slate-500">
+                      {transaction.type === 'INWARD' ? 'Nhà cung cấp' : 'Khách hàng'}
+                    </p>
                     <p className="font-medium text-slate-900">{transaction.partyName || '-'}</p>
                   </div>
                   {/* <div>
+                    <p className="text-xs text-slate-500">Chi nhánh</p>
                     <p className="font-medium text-slate-900">{transaction.branchName || '-'}</p>
                   </div> */}
                   <div className="col-span-2">
@@ -356,7 +343,7 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
                             {item.productName || '-'}
                           </td>
                           <td className="px-4 py-3 text-right text-slate-600">
-                            {item.unit || item.Unit || item.unitName || item.UnitName || '-'}
+                            {item.unit || item.unitName || '-'}
                           </td>
                           <td className="px-4 py-3 text-right font-medium text-slate-900">
                             {Number(item.quantity || 0).toLocaleString('vi-VN')}

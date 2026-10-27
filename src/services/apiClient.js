@@ -88,12 +88,6 @@ export const apiClient = async (endpoint, options = {}) => {
       const error = new Error(msg);
       error.status = response.status;
       error.data = errorData;
-      console.warn('[DEBUG apiClient] Full error response:', {
-        status: response.status,
-        body: errorData,
-        detail,
-        msg,
-      });
       throw error;
     }
 

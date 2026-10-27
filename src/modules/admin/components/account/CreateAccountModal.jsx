@@ -1,160 +1,188 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../../shared/components/Icon';
 
-const CreateAccountModal = ({ isOpen, onClose, onSave, roles }) => {
+const CreateAccountModal = ({ isOpen, onClose, initialTab, onSave }) => {
+  const [accountType, setAccountType] = useState(initialTab || 'owners');
   const [formData, setFormData] = useState({
     fullName: '',
+    username: '',
     email: '',
-    password: '',
     phoneNumber: '',
-    roleIds: [],
+    role: 'SALES_STAFF',
+    subscriptionPlan: 'BASIC',
   });
 
+  // Sync tab khi modal mở
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        fullName: '',
-        email: '',
-        password: '',
-        phoneNumber: '',
-        roleIds: [],
-      });
+      setAccountType(initialTab);
+      setFormData((prev) => ({ ...prev, role: 'SALES_STAFF', subscriptionPlan: 'BASIC' }));
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   if (!isOpen) return null;
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleRoleToggle = (roleId) => {
-    setFormData((prev) => ({
-      ...prev,
-      roleIds: prev.roleIds.includes(roleId)
-        ? prev.roleIds.filter((id) => id !== roleId)
-        : [...prev.roleIds, roleId],
-    }));
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.email || !formData.password) {
-      alert('Vui lòng nhập đầy đủ Tên, Email và Mật khẩu.');
+    if (!formData.fullName || !formData.email) {
+      alert('Vui lòng nhập Tên và Email.');
       return;
     }
-    onSave(formData);
+    // Validation Staff email domain check
+    if (accountType === 'staff' && !formData.email.endsWith('@system.local')) {
+      alert('[BR-44] Lỗi: Email nhân viên nội bộ phải có định dạng @system.local');
+      return;
+    }
+    const payload =
+      accountType === 'community'
+        ? { fullName: formData.fullName, email: formData.email, phoneNumber: formData.phoneNumber }
+        : {
+            fullName: formData.fullName,
+            username: formData.username || formData.email,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber,
+            roles: [formData.role],
+            subscriptionPlan: formData.subscriptionPlan,
+          };
+    onSave({ type: accountType, ...payload });
   };
-
-  // Lọc bỏ role Admin ra khỏi danh sách được cấp
-  const assignableRoles = roles.filter(
-    (r) => r.roleName.toLowerCase() !== 'admin' && r.roleName.toLowerCase() !== 'communityuser'
-  );
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-inverse-surface/50 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-surface-container-high pb-3">
-          <h3 className="text-base font-bold text-on-surface">Thêm Người Dùng Mới</h3>
+          <h3 className="text-base font-bold text-on-surface">Đăng ký Tài khoản mới</h3>
           <button onClick={onClose} className="text-outline hover:text-on-surface">
             <Icon name="x" size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
+              Loại tài khoản
+            </label>
+            <select
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value)}
+              className="w-full rounded-md border border-outline-variant bg-surface-container-low p-2.5 text-sm font-semibold text-on-surface outline-none"
+            >
+              <option value="owners">Partner Owner (Chủ đại lý)</option>
+              <option value="staff">System Staff (Nhân sự nội bộ)</option>
+              <option value="community">Community User (Người dùng diễn đàn)</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
-                Họ và Tên <span className="text-error">*</span>
+                Họ & Tên / Tên Shop
               </label>
               <input
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleChange}
                 type="text"
-                className="w-full rounded border border-outline-variant p-2 text-xs outline-none focus:border-primary"
-                placeholder="VD: Nguyễn Văn A"
+                className="w-full rounded-md border border-outline-variant p-2.5 text-sm outline-none focus:border-primary"
+                placeholder="Ví dụ: Cửa hàng A"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
-                Email đăng nhập <span className="text-error">*</span>
+                Email định danh
               </label>
               <input
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 type="email"
-                className="w-full rounded border border-outline-variant p-2 text-xs outline-none focus:border-primary"
-                placeholder="email@mep.vn"
+                className="w-full rounded-md border border-outline-variant p-2.5 text-sm outline-none focus:border-primary"
+                placeholder="email@domain.com"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {accountType !== 'community' && (
             <div>
               <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
-                Mật khẩu (Tối thiểu 6 ký tự) <span className="text-error">*</span>
+                Username
               </label>
               <input
-                name="password"
-                value={formData.password}
+                name="username"
+                value={formData.username}
                 onChange={handleChange}
-                type="password"
-                className="w-full rounded border border-outline-variant p-2 text-xs outline-none focus:border-primary"
-                placeholder="••••••••"
+                type="text"
+                className="w-full rounded-md border border-outline-variant p-2.5 text-sm outline-none focus:border-primary"
+                placeholder="Mặc định lấy theo email nếu bỏ trống"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
-                Số điện thoại
-              </label>
-              <input
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                type="tel"
-                className="w-full rounded border border-outline-variant p-2 text-xs outline-none focus:border-primary"
-                placeholder="09..."
-              />
-            </div>
-          </div>
+          )}
 
           <div>
-            <label className="mb-2 block text-xs font-semibold text-on-surface-variant">
-              Gán Chức vụ (Có thể chọn nhiều)
+            <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
+              Số điện thoại
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {assignableRoles.map((role) => (
-                <label
-                  key={role.roleId}
-                  className="flex cursor-pointer items-center gap-2 rounded border border-outline-variant p-2 hover:bg-surface-container-low"
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.roleIds.includes(role.roleId)}
-                    onChange={() => handleRoleToggle(role.roleId)}
-                    className="h-4 w-4 rounded text-primary focus:ring-primary"
-                  />
-                  <div>
-                    <div className="text-xs font-bold text-on-surface">{role.roleName}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
+            <input
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              type="tel"
+              className="w-full rounded-md border border-outline-variant p-2.5 text-sm outline-none focus:border-primary"
+              placeholder="Ví dụ: 0901234567"
+            />
           </div>
 
-          <div className="mt-4 flex justify-end gap-3 border-t border-surface-container-high pt-4">
+          {/* Render dynamic fields based on type */}
+          {accountType === 'staff' && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
+                Role Mapping (Quyền hệ thống)
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full rounded-md border border-outline-variant p-2.5 text-sm outline-none"
+              >
+                <option value="SALES_STAFF">Nhân viên bán hàng (POS)</option>
+                <option value="INVENTORY_CONTROLLER">Thủ kho (Inventory)</option>
+              </select>
+            </div>
+          )}
+
+          {accountType === 'owners' && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-on-surface-variant">
+                Gói Subscription (Quota)
+              </label>
+              <select
+                name="subscriptionPlan"
+                value={formData.subscriptionPlan}
+                onChange={handleChange}
+                className="w-full rounded-md border border-outline-variant p-2.5 text-sm outline-none"
+              >
+                <option value="BASIC">Gói Cơ Bản (Basic Tier)</option>
+                <option value="PREMIUM">Gói Cao Cấp (Premium Tier)</option>
+                <option value="ENTERPRISE">Gói Doanh Nghiệp (Enterprise Tier)</option>
+              </select>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 border-t border-surface-container-high pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded px-4 py-2 text-xs font-bold text-on-surface-variant transition-colors hover:bg-surface-container-high"
+              className="rounded-md px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
-              className="rounded bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-sm transition-colors hover:bg-primary/90"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-on-primary hover:bg-on-primary-fixed-variant"
             >
-              Lưu Người Dùng
+              Khởi tạo Tài khoản
             </button>
           </div>
         </form>

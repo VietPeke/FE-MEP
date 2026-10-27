@@ -1,11 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Icon from '../../../shared/components/Icon';
-import {
-  getApprovalList,
-  getApprovalDetail,
-  approveStore,
-  rejectStore,
-} from '../services/adminService';
+import { getApprovalList, approveStore, rejectStore } from '../services/adminService';
 import StoreApprovalDetailModal from '../components/store/StoreApprovalDetailModal';
 import ApprovalActionModal from '../components/store/ApprovalActionModal';
 
@@ -70,16 +65,6 @@ const StoreApprovals = () => {
     } catch (err) {
       console.error('Approval action error:', err);
       alert(err.message || 'Thao tác thất bại');
-    }
-  };
-
-  const handleViewDetail = async (approval) => {
-    try {
-      const detail = await getApprovalDetail(approval.approvalId);
-      setDetailModalData(detail || approval);
-    } catch (err) {
-      console.error('Fetch approval detail error:', err);
-      setDetailModalData(approval); // fallback to row data
     }
   };
 
@@ -275,7 +260,7 @@ const StoreApprovals = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => handleViewDetail(approval)}
+                        onClick={() => setDetailModalData(approval)}
                         className="mr-2 inline-flex items-center gap-1 rounded-md border border-outline-variant px-3 py-1 text-xs font-bold hover:bg-surface-container-high"
                       >
                         <Icon name="visibility" size={14} /> Xem

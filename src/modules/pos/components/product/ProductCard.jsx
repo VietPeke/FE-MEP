@@ -69,7 +69,9 @@ const ProductCard = ({
           </div>
           <div className="shrink-0 text-right">
             <div className="text-sm font-bold text-[#004785]">{formatCurrency(product.price)}</div>
-            <div className="text-xs text-slate-400">/ {product.unit || 'Cái'}</div>
+            {product.unit && product.unit !== 'Cái' && (
+              <div className="text-xs text-slate-400">/ {product.unit}</div>
+            )}
           </div>
         </div>
       </button>
@@ -125,7 +127,9 @@ const ProductCard = ({
             </span>
             <span className="text-xs font-semibold text-slate-600">
               SL: {product.stock}
-              <span className="ml-1 text-slate-400">({product.unit || 'Cái'})</span>
+              {product.unit && product.unit !== 'Cái' && (
+                <span className="ml-1 text-slate-400">({product.unit})</span>
+              )}
             </span>
           </div>
         </div>

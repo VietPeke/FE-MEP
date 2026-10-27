@@ -8,20 +8,25 @@ export const extractProductList = (response) => {
 };
 
 export const buildDimensionText = (product = {}) => {
-  const specification = product?.specification || product?.Specification || '';
+  const specification = product?.specification || '';
   if (specification) return specification;
 
-  const width = product?.width ?? product?.Width ?? '';
-  const length = product?.length ?? product?.Length ?? '';
-  const height = product?.height ?? product?.Height ?? '';
-  const sizeUnit = product?.sizeUnit || product?.SizeUnit || '';
+  const width = product?.width || '';
+  const length = product?.length || '';
+  const weight = product?.weight || '';
+  const weightUnit = product?.weightUnit || '';
+  const sizeUnit = product?.sizeUnit || '';
 
-  const sizeParts = [width, length, height].filter(
+  const sizeParts = [width, length].filter(
     (v) => v !== undefined && v !== null && `${v}`.trim() !== ''
   );
-  if (!sizeParts.length) return '';
-  const sizeText = sizeParts.join(' × ');
-  return sizeUnit ? `${sizeText} ${sizeUnit}` : sizeText;
+  const sizeText = sizeParts.join(' x ');
+  const weightText = weight ? `${weight}${weightUnit || ''}` : '';
+
+  if (sizeText && weightText && sizeUnit) return `${sizeText}${sizeUnit}, ${weightText}`;
+  if (sizeText && weightText) return `${sizeText}, ${weightText}`;
+  if (sizeText && sizeUnit) return `${sizeText}${sizeUnit}`;
+  return sizeText || weightText || '';
 };
 
 /**
@@ -59,8 +64,6 @@ export const normalizeProduct = (product = {}, index = 0) => {
     actualStock,
     availableStock,
     reservedStock: Number(product.reservedStock ?? 0),
-    minimumStock: Number(product.minimumStock ?? product.MinimumStock ?? 0),
-    minStock: Number(product.minimumStock ?? product.MinimumStock ?? 0),
     location: product.shelfLocation || '',
     shelfLocation: product.shelfLocation || '',
     image: product.imageUrl || (Array.isArray(product.images) && product.images[0]) || '',
@@ -68,12 +71,11 @@ export const normalizeProduct = (product = {}, index = 0) => {
     attributes: Array.isArray(product.attributes) ? product.attributes : [],
     conversionUnits: Array.isArray(product.conversionUnits) ? product.conversionUnits : [],
     specification: product.specification || '',
-    weight: product.weight ?? product.Weight ?? null,
-    weightUnit: product.weightUnit || product.WeightUnit || '',
-    width: product.width ?? product.Width ?? null,
-    length: product.length ?? product.Length ?? null,
-    height: product.height ?? product.Height ?? null,
-    sizeUnit: product.sizeUnit || product.SizeUnit || 'mm',
+    weight: product.weight || null,
+    weightUnit: product.weightUnit || '',
+    width: product.width || null,
+    length: product.length || null,
+    height: product.height || null,
     dimension: buildDimensionText(product) || 'Chưa có',
     // status: trạng thái TỒN KHO (hiển thị dạng chữ + màu), không phải trạng thái kinh doanh
     status: product.status || (availableStock > 0 ? 'Sẵn hàng' : 'Hết hàng'),
@@ -91,13 +93,23 @@ export const normalizeProduct = (product = {}, index = 0) => {
 
 export const buildSpecification = (form) => {
   if (form.specification) return form.specification;
-  const sizeParts = [form.width, form.length, form.height].filter(
+  const sizeParts = [form.width, form.length].filter(
     (v) => v !== undefined && v !== null && `${v}`.trim() !== ''
   );
-  if (!sizeParts.length) return '';
-  const sizeText = sizeParts.join(' × ');
-  const unit = form.sizeUnit || '';
-  return unit ? `${sizeText} ${unit}` : sizeText;
+  const weightText = [form.weight, form.weightUnit].filter(
+    (v) => v !== undefined && v !== null && `${v}`.trim() !== ''
+  );
+  if (!sizeParts.length && !weightText.length && !form.height) return '';
+  const sizeText = sizeParts.join(' x ');
+  const unit = form.sizeUnit || form.weightUnit || '';
+  const weightValue = form.weight ? `${form.weight}${form.weightUnit || ''}` : '';
+  if (sizeText && weightValue && unit) return `${sizeText}${unit}, ${weightValue}`;
+  if (sizeText && weightValue) return `${sizeText}, ${weightValue}`;
+  if (sizeText && unit) return `${sizeText}${unit}`;
+  if (sizeText) return sizeText;
+  if (weightValue) return weightValue;
+  if (form.height && unit) return `${form.height}${unit}`;
+  return `${form.height || ''}`.trim();
 };
 
 // Chuẩn hóa Payload CREATE (ProductUpsertDto - camelCase chuẩn)
@@ -116,8 +128,6 @@ export const createProductPayload = (form) => ({
   availableStock: Number(form.availableStock ?? form.stock ?? 0),
   reservedStock: Number(form.reservedStock || 0),
   shelfLocation: form.shelfLocation || form.location || form.locations?.[0] || '',
-  minimumStock: Number(form.minimumStock ?? form.stockMin ?? 0),
-  maximumStock: Number(form.stockMax ?? 0),
   weight: Number(form.weight) || null,
   weightUnit: form.weightUnit || 'g',
   width: Number(form.width) || null,

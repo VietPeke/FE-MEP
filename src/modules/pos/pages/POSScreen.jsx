@@ -30,34 +30,21 @@ const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản' };
 const newPaymentLine = (method = 'cash') => ({ id: Date.now(), method, amount: 0 });
 
 // Map API product sang format POS cart (có hỗ trợ UOM)
-const mapToPosProduct = (p) => {
-  console.log('[DEBUG mapToPosProduct] product data:', {
-    productId: p.productId || p.productCode || p.id,
-    name: p.productName || p.name,
-    retailPrice: p.retailPrice,
-    floorPrice: p.floorPrice,
-    unitPrice: p.unitPrice,
-    salePrice: p.salePrice,
-    price: p.price,
-    unit: p.unit,
-    conversionUnits: p.conversionUnits,
-  });
-  return {
-    id: p.productId || p.productCode || p.id || '',
-    name: p.productName || p.name || '',
-    price: p.retailPrice ?? p.unitPrice ?? p.salePrice ?? p.price ?? 0,
-    sku: p.productCode || p.barcode || '',
-    stock: p.availableStock ?? p.quantity ?? p.stock ?? 0,
-    category: p.categoryName || p.group || p.category || '',
-    status: (p.availableStock ?? p.quantity ?? p.stock ?? 0) > 0 ? 'Còn hàng' : 'Hết hàng',
-    image: p.image || '',
-    productId: p.productId || p.id || '',
-    barcode: p.barcode || '',
-    unit: p.unit || 'Cái', // Base unit
-    conversionUnits: p.conversionUnits || [], // Các đơn vị quy đổi
-    hasMultipleUnits: (p.conversionUnits || []).length > 0, // Có nhiều đơn vị không
-  };
-};
+const mapToPosProduct = (p) => ({
+  id: p.productId || p.productCode || p.id || '',
+  name: p.productName || p.name || '',
+  price: p.retailPrice ?? p.unitPrice ?? p.salePrice ?? p.price ?? 0,
+  sku: p.productCode || p.barcode || '',
+  stock: p.availableStock ?? p.quantity ?? p.stock ?? 0,
+  category: p.categoryName || p.group || p.category || '',
+  status: (p.availableStock ?? p.quantity ?? p.stock ?? 0) > 0 ? 'Còn hàng' : 'Hết hàng',
+  image: p.image || '',
+  productId: p.productId || p.id || '',
+  barcode: p.barcode || '',
+  unit: p.unit || 'Cái', // Base unit
+  conversionUnits: p.conversionUnits || [], // Các đơn vị quy đổi
+  hasMultipleUnits: (p.conversionUnits || []).length > 0, // Có nhiều đơn vị không
+});
 
 const POSScreen = () => {
   const { search, setSearch, showNotice, quickAddCust, setDrafts, setFooterInfo } =
@@ -137,7 +124,6 @@ const POSScreen = () => {
 
   const {
     products: posApiProducts,
-    // eslint-disable-next-line no-unused-vars
     loading: productsLoading,
     refetch: refetchProducts,
   } = usePosProductList(search);
@@ -194,14 +180,11 @@ const POSScreen = () => {
   useEffect(() => {
     if (draftData && draftData.id !== loadedDraft.current) {
       loadedDraft.current = draftData.id;
-      // Load trực tiếp items vào cart, giữ nguyên id và quantity gốc từ draft
-      cart.loadDraft(draftData.items);
+      // Nap items vao cart
+      draftData.items.forEach((item) => cart.addToCart(item));
       setSelectedCustomer(draftData.customer);
       // Xoa draft khoi danh sach
       setDrafts((prev) => prev.filter((d) => d.id !== draftData.id));
-
-      // Xóa state trong history để tránh bị nạp lại nếu người dùng ấn F5
-      window.history.replaceState({}, '');
     }
   }, [draftData, cart, setDrafts]);
 
@@ -266,17 +249,6 @@ const POSScreen = () => {
       }
 
       // 2. Thêm từng sản phẩm vào hóa đơn (kèm UOM data)
-      console.log(
-        '[DEBUG] addInvoiceItem payloads:',
-        cart.cart.map((item) => ({
-          productId: item.productId || item.id,
-          name: item.name,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          selectedUnit: item.selectedUnit,
-          convertValue: item.convertValue,
-        }))
-      );
       await Promise.all(
         cart.cart.map((item) =>
           addInvoiceItem(invoice.invoiceId, {
@@ -305,23 +277,15 @@ const POSScreen = () => {
         });
         payMethodsVN.push({ method: vnMethod, amount: line.amount });
         const pmBody = { method, amount: line.amount };
-        if (method === 'Cash' || method.toLowerCase() === 'cash') {
-          pmBody.cashReceived =
-            totalPaidAmount && totalPaidAmount >= line.amount ? totalPaidAmount : line.amount;
-        }
         try {
           await createPayment(invoice.invoiceId, pmBody);
         } catch (pmErr) {
           console.warn('[POS] createPayment error:', pmErr.data || pmErr.message);
           // Thử các format khác nhau
           const attempts = [
-            { paymentMethod: method, amount: line.amount, cashReceived: pmBody.cashReceived },
-            {
-              method: method.toLowerCase(),
-              amount: line.amount,
-              cashReceived: pmBody.cashReceived,
-            },
-            { Method: method, Amount: line.amount, CashReceived: pmBody.cashReceived },
+            { paymentMethod: method, amount: line.amount },
+            { method: method.toLowerCase(), amount: line.amount },
+            { Method: method, Amount: line.amount },
           ];
           let lastErr = pmErr;
           for (const attempt of attempts) {
@@ -355,13 +319,6 @@ const POSScreen = () => {
         await finalizeInvoice(invoice.invoiceId);
       } catch (finalErr) {
         console.warn('[POS] finalizeInvoice error:', finalErr);
-        console.warn('[DEBUG finalizeInvoice] chi tiết lỗi:', {
-          message: finalErr.message,
-          data: finalErr.data,
-          response: finalErr.response,
-          status: finalErr.status,
-          errors: finalErr.errors,
-        });
       }
 
       // Cập nhật realtime cho ca đang mở (cộng dồn vào sessionStorage)
@@ -456,44 +413,16 @@ const POSScreen = () => {
           createdBy: staffName,
         });
         // Thêm sản phẩm (kèm UOM data)
-        console.log(
-          '[DEBUG handleOpenPay - Transfer] cart items:',
-          JSON.stringify(
-            cart.cart.map((item) => ({
-              productId: item.productId || item.id,
-              name: item.name,
-              quantity: item.quantity,
-              unitPrice: item.price,
-              selectedUnit: item.selectedUnit,
-              convertValue: item.convertValue,
-              price: item.price,
-              retailPrice: item.retailPrice,
-              floorPrice: item.floorPrice,
-              salePrice: item.salePrice,
-              unit: item.unit,
-            })),
-            null,
-            2
-          )
-        );
-        console.log('[DEBUG handleOpenPay - Transfer] invoiceId:', invoice.invoiceId);
         await Promise.all(
-          cart.cart.map((item) => {
-            console.log('[DEBUG handleOpenPay] gửi item:', {
+          cart.cart.map((item) =>
+            addInvoiceItem(invoice.invoiceId, {
               productId: item.productId || item.id,
               quantity: item.quantity,
               unitPrice: item.price,
               selectedUnit: item.selectedUnit,
               convertValue: item.convertValue,
-            });
-            return addInvoiceItem(invoice.invoiceId, {
-              productId: item.productId || item.id,
-              quantity: item.quantity,
-              unitPrice: item.price,
-              selectedUnit: item.selectedUnit,
-              convertValue: item.convertValue,
-            });
-          })
+            })
+          )
         );
         // Lưu tên thu ngân
         const invoiceId = invoice.invoiceId;
@@ -789,13 +718,6 @@ const POSScreen = () => {
       refetchProducts();
     } catch (err) {
       console.error('[POS] QR Confirm error:', err);
-      console.warn('[DEBUG QR Confirm] chi tiết lỗi:', {
-        message: err.message,
-        data: err.data,
-        response: err.response,
-        status: err.status,
-        errors: err.errors,
-      });
       showNotice('Lỗi xác nhận: ' + (err.message || 'Không thể xác nhận'));
     } finally {
       setConfirmLoading(false);
