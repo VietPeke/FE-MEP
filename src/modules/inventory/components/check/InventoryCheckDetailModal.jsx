@@ -45,21 +45,11 @@ const normalizeDetailData = (data) => {
   };
 };
 
-const getStatusLabel = (item) => {
-  if (!item) return '...';
-  const status = item.status || item.Status;
-  const recountNumber = Number(item.recountNumber ?? item.RecountNumber ?? 0);
-
-  if (status === 'Draft') {
-    return recountNumber > 0 ? 'Yêu cầu đếm lại' : 'Nháp (Đang đếm)';
-  }
-
-  switch (status) {
-    case 'WaitingForApproval': return 'Chờ duyệt';
-    case 'Completed': return 'Đã hoàn thành';
-    case 'Cancelled': return 'Đã hủy';
-    default: return status;
-  }
+const STATUS_MAP = {
+  Draft: 'Nháp (Đang đếm)',
+  WaitingForApproval: 'Chờ duyệt',
+  Completed: 'Đã hoàn thành',
+  Cancelled: 'Đã hủy',
 };
 
 const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess, onEditClick }) => {
@@ -508,7 +498,7 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
                 disabled={actionLoading}
                 className="flex items-center gap-2"
               >
-                <Icon name="edit" size={18} /> Nhập giải trình
+                <Icon name="edit_note" size={18} /> Nhập giải trình
               </Button>
             )}
 
@@ -535,7 +525,7 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
                   disabled={actionLoading}
                   className="flex items-center gap-2"
                 >
-                  <Icon name="history" size={18} /> Yêu cầu đếm lại
+                  <Icon name="replay" size={18} /> Yêu cầu đếm lại
                 </Button>
                 <Button
                   variant="success"
@@ -645,7 +635,7 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
               }
               size="lg"
             >
-              {getStatusLabel(detailData)}
+              {STATUS_MAP[detailData?.status] || detailData?.status || '...'}
             </Badge>
 
             {detailData.notes && (

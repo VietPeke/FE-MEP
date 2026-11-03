@@ -38,19 +38,16 @@ export const useCategoryReturnPolicies = (branchId) => {
           : policyRes.value.data.policies || [];
         const policyMap = {};
         savedPolicies.forEach((p) => {
-          const catId = p.categoryId || '';
-          const catName = p.categoryName || '';
-          const key = catId || catName;
-          if (key) {
-            policyMap[key] = {
-              categoryId: catId,
-              categoryName: catName,
+          if (p.categoryName) {
+            policyMap[p.categoryName] = {
               returnDays: p.returnDays ?? p.returnDaysAllowed ?? '',
               exchangeDays: p.exchangeDays ?? p.exchangeDaysAllowed ?? '',
             };
           }
         });
         setPolicies(policyMap);
+        // Chỉ ghi đè localStorage nếu API trả về dữ liệu không rỗng
+        // Tránh mất dữ liệu khi F5 (API chưa có endpoint hoặc trả về rỗng)
         if (Object.keys(policyMap).length > 0) {
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(policyMap));
@@ -65,11 +62,10 @@ export const useCategoryReturnPolicies = (branchId) => {
             setPolicies(parsed);
             // Đồng thời push lên API nếu có dữ liệu trong localStorage (đồng bộ 1 chiều)
             if (Object.keys(parsed).length > 0) {
-              const policiesArray = Object.values(parsed)
-                .filter((vals) => (vals.returnDays || vals.exchangeDays) && vals.categoryName)
-                .map((vals) => ({
-                  categoryId: vals.categoryId || null,
-                  categoryName: vals.categoryName,
+              const policiesArray = Object.entries(parsed)
+                .filter(([_, vals]) => vals.returnDays || vals.exchangeDays)
+                .map(([categoryName, vals]) => ({
+                  categoryName,
                   returnDays: vals.returnDays ? parseInt(vals.returnDays, 10) : null,
                   exchangeDays: vals.exchangeDays ? parseInt(vals.exchangeDays, 10) : null,
                 }));
@@ -90,30 +86,16 @@ export const useCategoryReturnPolicies = (branchId) => {
     fetchData();
   }, [fetchData]);
 
-  const updatePolicy = useCallback((categoryName, field, value, catId) => {
+  const updatePolicy = useCallback((categoryName, field, value) => {
     setPolicies((prev) => {
-      const key = catId || categoryName;
-      if (!key) return prev;
-      const current = prev[key] || {
-        returnDays: '',
-        exchangeDays: '',
-        categoryId: catId || '',
-        categoryName: categoryName || '',
-      };
+      const current = prev[categoryName] || { returnDays: '', exchangeDays: '' };
       const updated = { ...current, [field]: value };
-      if (catId) updated.categoryId = catId;
-      if (categoryName) updated.categoryName = categoryName;
-
       // Nếu cả 2 đều rỗng → xóa hẳn category khỏi policies
       if (!updated.returnDays && !updated.exchangeDays) {
-        const result = { ...prev };
-        delete result[key];
-        // Xóa luôn entry cũ key bằng name nếu có (khi đã migrate lên id)
-        const staleKey = catId && categoryName ? categoryName : null;
-        if (staleKey && result[staleKey] === current) delete result[staleKey];
-        return result;
+        const { [categoryName]: _, ...rest } = prev;
+        return rest;
       }
-      return { ...prev, [key]: updated };
+      return { ...prev, [categoryName]: updated };
     });
   }, []);
 
@@ -123,11 +105,10 @@ export const useCategoryReturnPolicies = (branchId) => {
     setMessage(null);
     try {
       const data = forcedPolicies || policies;
-      const policiesArray = Object.values(data)
-        .filter((vals) => (vals.returnDays || vals.exchangeDays) && vals.categoryName)
-        .map((vals) => ({
-          categoryId: vals.categoryId || null,
-          categoryName: vals.categoryName,
+      const policiesArray = Object.entries(data)
+        .filter(([_, vals]) => vals.returnDays || vals.exchangeDays)
+        .map(([categoryName, vals]) => ({
+          categoryName,
           returnDays: vals.returnDays ? parseInt(vals.returnDays, 10) : null,
           exchangeDays: vals.exchangeDays ? parseInt(vals.exchangeDays, 10) : null,
         }));

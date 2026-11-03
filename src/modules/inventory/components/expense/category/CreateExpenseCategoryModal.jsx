@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import Icon from '../../../../../shared/components/Icon';
 import { Modal } from '../../../../../shared/components/Modal';
+import { Button } from '../../../../../shared/components/Button';
 import { Input } from '../../../../../shared/components/Input';
+import { Save } from 'lucide-react';
 
 const CreateExpenseCategoryModal = ({
   isOpen,
@@ -27,29 +28,20 @@ const CreateExpenseCategoryModal = ({
       size="md"
       footer={
         <div className="flex w-full items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={creating}
-            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
-          >
+          <Button variant="secondary" onClick={onClose} disabled={creating}>
             Hủy
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             form="create-expense-category-form"
+            variant="primary"
             disabled={creating || !newName.trim()}
-            className="flex items-center gap-2 rounded-lg bg-[#004785] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black disabled:opacity-50"
+            loading={creating}
+            className="flex items-center gap-2"
           >
-            {creating ? (
-              'Đang tạo...'
-            ) : (
-              <>
-                <Icon name="save" size={18} />
-                Tạo nhóm
-              </>
-            )}
-          </button>
+            {!creating && <Save size={18} />}
+            {creating ? 'Đang tạo...' : 'Tạo nhóm'}
+          </Button>
         </div>
       }
     >

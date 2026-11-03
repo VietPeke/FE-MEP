@@ -10,7 +10,6 @@ import { Input } from '../../../../shared/components/Input';
 import { formatCurrency } from '../../../../shared/utils/formatCurrency';
 import { formatDateTime } from '../../../../shared/utils/formatDate';
 import { getReturns, cancelReturn } from '../../services/posService';
-import Icon from '../../../../shared/components/Icon';
 
 const STATUS_CONFIG = {
   PENDING: { label: 'Chờ duyệt', variant: 'warning' },
@@ -53,7 +52,7 @@ const ReturnList = ({ onSelect, refreshKey = 0 }) => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [cancellingId, setCancellingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const pageSize = 15;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -224,47 +223,61 @@ const ReturnList = ({ onSelect, refreshKey = 0 }) => {
         emptyMessage="Chưa có phiếu đổi trả nào"
       />
 
-      {filtered.length > 0 && (
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-3">
-          <div className="flex items-center gap-4 text-sm text-slate-600">
-            <div className="flex items-center gap-2">
-              <span>Hiển thị</span>
-              <select
-                value={pageSize}
-                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                className="rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-primary"
-              >
-                <option value={20}>20 dòng</option>
-                <option value={50}>50 dòng</option>
-                <option value={100}>100 dòng</option>
-              </select>
-            </div>
-            <span>
-              {filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} -{' '}
-              {Math.min(currentPage * pageSize, filtered.length)} trong tổng số{' '}
-              {filtered.length} đơn
-            </span>
-          </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+          <span className="text-sm text-slate-500">
+            Hiển thị {(currentPage - 1) * pageSize + 1} -{' '}
+            {Math.min(currentPage * pageSize, filtered.length)} trên {filtered.length} đơn
+          </span>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className="rounded-lg border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              disabled={currentPage === 1}
             >
-              <Icon name="chevron_left" className="text-[18px]" />
-            </button>
-            <div className="px-3 text-sm text-slate-700">
-              Trang {currentPage} / {totalPages || 1}
+              Trước
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }).map((_, i) => {
+                if (
+                  totalPages > 7 &&
+                  i !== 0 &&
+                  i !== totalPages - 1 &&
+                  Math.abs(currentPage - 1 - i) > 2
+                ) {
+                  if (Math.abs(currentPage - 1 - i) === 3) {
+                    return (
+                      <span key={i} className="px-1 text-slate-400">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                }
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`h-8 min-w-[32px] rounded-md px-2 text-sm font-medium transition-colors ${
+                      currentPage === i + 1
+                        ? 'bg-[#004785] text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
             </div>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="rounded-lg border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
             >
-              <Icon name="chevron_right" className="text-[18px]" />
-            </button>
+              Sau
+            </Button>
           </div>
         </div>
       )}

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Icon from '../../../../shared/components/Icon';
 
 const emptyForm = {
   supplierName: '',
@@ -93,9 +92,9 @@ const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave }) => 
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-white"
           >
-            <Icon name="close" size={20} />
+            X
           </button>
         </div>
 
@@ -259,16 +258,9 @@ const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave }) => 
               type="submit"
               form="supplierForm"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-[#0f4c81] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black disabled:opacity-60"
+              className="rounded-xl bg-[#0f4c81] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black disabled:opacity-60"
             >
-              {submitting ? (
-                'Đang lưu...'
-              ) : (
-                <>
-                  <Icon name="save" size={18} />
-                  {mode === 'edit' ? 'Lưu cập nhật' : 'Tạo mới'}
-                </>
-              )}
+              {submitting ? 'Đang lưu...' : mode === 'edit' ? 'Lưu cập nhật' : 'Tạo mới'}
             </button>
           </div>
         )}

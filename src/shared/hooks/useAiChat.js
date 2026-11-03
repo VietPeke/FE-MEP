@@ -95,7 +95,6 @@ export const useAiChat = () => {
     isFull,
     toggleFull,
     messages,
-    setMessages,
     input,
     setInput,
     send,

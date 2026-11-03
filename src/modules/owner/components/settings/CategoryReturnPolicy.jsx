@@ -117,29 +117,17 @@ const CategoryReturnPolicy = ({ branchId }) => {
     return cat?.productCount ?? null;
   };
 
-  const getCategoryId = (cat) => (typeof cat === 'string' ? null : cat?.id || null);
-
   // Các nhóm hàng đã được thiết lập (có ít nhất 1 trong 2 policy)
-  const configuredEntries = Object.values(policies).filter(
-    (vals) => vals.returnDays || vals.exchangeDays
+  const configuredEntries = Object.entries(policies).filter(
+    ([_, vals]) => vals.returnDays || vals.exchangeDays
   );
 
   // Các nhóm hàng chưa thiết lập policy nào
   const availableCategories = categories.filter((cat) => {
-    const id = getCategoryId(cat);
     const name = getCategoryName(cat);
-    const policy = policies[name] || (id ? policies[id] : null);
+    const policy = policies[name];
     return !policy || (!policy.returnDays && !policy.exchangeDays);
   });
-
-  const getCatIdByName = (name) => {
-    if (!name) return '';
-    const entry = policies[name];
-    if (entry) return entry.categoryId || '';
-    // Scan values
-    const found = Object.values(policies).find((p) => p.categoryName === name);
-    return found?.categoryId || '';
-  };
 
   const handleOpenAdd = () => {
     setEditCategory(null);
@@ -151,37 +139,28 @@ const CategoryReturnPolicy = ({ branchId }) => {
   };
 
   const handleOpenEdit = (catName) => {
-    const entry = policies[catName] || Object.values(policies).find((p) => p.categoryName === catName) || {};
     setEditCategory(catName);
+    const policy = policies[catName] || {};
     setFormCategory(catName);
-    setFormReturn(fromTotalDays(entry.returnDays));
-    setFormExchange(fromTotalDays(entry.exchangeDays));
+    setFormReturn(fromTotalDays(policy.returnDays));
+    setFormExchange(fromTotalDays(policy.exchangeDays));
     setShowModal(true);
   };
 
   const handleModalSave = async () => {
     const catName = editCategory || formCategory;
     if (!catName) return;
-    const catId = getCatIdByName(catName);
     const returnDays = toTotalDays(formReturn.value, formReturn.unit);
     const exchangeDays = toTotalDays(formExchange.value, formExchange.unit);
 
-    updatePolicy(catName, 'returnDays', String(returnDays), catId);
-    updatePolicy(catName, 'exchangeDays', String(exchangeDays), catId);
+    updatePolicy(catName, 'returnDays', String(returnDays));
+    updatePolicy(catName, 'exchangeDays', String(exchangeDays));
     // Sync ngay xuống localStorage để ReturnForm dùng được
-    syncToLocal(catId || catName, catName, String(returnDays), String(exchangeDays));
+    syncToLocal(catName, String(returnDays), String(exchangeDays));
 
     // Lưu lên backend ngay (không cần bấm "Lưu cài đặt")
-    // Xây dựng lại policies map từ policies hiện tại + thay đổi
-    const key = catId || catName;
-    const newEntry = {
-      categoryId: catId,
-      categoryName: catName,
-      returnDays: String(returnDays),
-      exchangeDays: String(exchangeDays),
-    };
-    const updated = { ...policies, [key]: newEntry };
-    if (!returnDays && !exchangeDays) delete updated[key];
+    const updated = { ...policies, [catName]: { returnDays: String(returnDays), exchangeDays: String(exchangeDays) } };
+    if (!returnDays && !exchangeDays) delete updated[catName];
     await savePolicies(updated);
 
     setShowModal(false);
@@ -190,36 +169,24 @@ const CategoryReturnPolicy = ({ branchId }) => {
 
   const handleDelete = async (catName) => {
     if (!window.confirm(`Xóa toàn bộ chính sách đổi/trả cho nhóm hàng "${catName}"?`)) return;
-    const catId = getCatIdByName(catName);
-    updatePolicy(catName, 'returnDays', '', catId);
-    updatePolicy(catName, 'exchangeDays', '', catId);
-    syncToLocal(catId || catName, catName, '', '');
+    updatePolicy(catName, 'returnDays', '');
+    updatePolicy(catName, 'exchangeDays', '');
+    syncToLocal(catName, '', '');
     // Lưu lên backend ngay
     const updated = { ...policies };
-    const key = catId || catName;
-    delete updated[key];
+    delete updated[catName];
     await savePolicies(updated);
   };
 
   // Sync policies xuống localStorage ngay lập tức (ko cần đợi bấm Lưu cài đặt)
-  const syncToLocal = (key, catName, returnDays, exchangeDays) => {
+  const syncToLocal = (catName, returnDays, exchangeDays) => {
     try {
       const raw = localStorage.getItem('pos_category_return_policies');
       const stored = raw ? JSON.parse(raw) : {};
-      const storeKey = key || catName;
       if (returnDays || exchangeDays) {
-        stored[storeKey] = {
-          categoryId: key || '',
-          categoryName: catName || '',
-          returnDays,
-          exchangeDays,
-        };
+        stored[catName] = { returnDays, exchangeDays };
       } else {
-        delete stored[storeKey];
-        // Dọn dẹp entry cũ key bằng name nếu có
-        if (key && catName && stored[catName]) {
-          delete stored[catName];
-        }
+        delete stored[catName];
       }
       localStorage.setItem('pos_category_return_policies', JSON.stringify(stored));
     } catch {}
@@ -315,16 +282,15 @@ const CategoryReturnPolicy = ({ branchId }) => {
               </tr>
             </thead>
             <tbody>
-              {configuredEntries.map((vals) => {
-                const catName = vals.categoryName || '';
+              {configuredEntries.map(([catName, vals]) => {
                 const cat = categories.find((c) => getCategoryName(c) === catName);
                 const productCount = cat ? getCategoryProductCount(cat) : null;
                 return (
                   <tr
-                    key={vals.categoryId || catName}
+                    key={catName}
                     className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
                   >
-                    <td className="py-3 pr-4 font-medium text-slate-900">{catName || vals.categoryId}</td>
+                    <td className="py-3 pr-4 font-medium text-slate-900">{catName}</td>
                     <td className="py-3 pr-4 text-slate-500">
                       {productCount !== null ? `${productCount}` : '-'}
                     </td>

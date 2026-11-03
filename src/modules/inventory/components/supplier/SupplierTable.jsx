@@ -1,5 +1,4 @@
 import React from 'react';
-import Icon from '../../../../shared/components/Icon';
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('vi-VN', {
@@ -53,11 +52,10 @@ const SupplierTable = ({ suppliers, loading, deletingId, onDetail, onEdit, onDel
           {suppliers.map((supplier) => (
             <tr
               key={supplier.id}
-              onClick={() => onDetail(supplier)}
-              className="cursor-pointer rounded-xl bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
+              className="rounded-xl bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
             >
               <td className="rounded-l-xl px-3 py-3">
-                <div className="font-semibold text-blue-900">{supplier.name}</div>
+                <div className="font-semibold text-slate-900">{supplier.name}</div>
                 <div className="text-xs text-slate-500">{supplier.address || '---'}</div>
               </td>
               <td className="px-3 py-3">
@@ -83,21 +81,25 @@ const SupplierTable = ({ suppliers, loading, deletingId, onDetail, onEdit, onDel
                 </div>
               </td>
               <td className="rounded-r-xl px-3 py-3">
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={(e) => { e.stopPropagation(); onEdit(supplier); }}
-                    className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50"
-                    title="Chỉnh sửa"
+                    onClick={() => onDetail(supplier)}
+                    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200"
                   >
-                    <Icon name="edit" size={18} />
+                    Xem
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(supplier); }}
-                    disabled={deletingId === supplier.id}
-                    className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
-                    title="Xóa nhà cung cấp"
+                    onClick={() => onEdit(supplier)}
+                    className="rounded-lg border border-blue-200 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
                   >
-                    <Icon name="delete" size={18} />
+                    Sửa
+                  </button>
+                  <button
+                    onClick={() => onDelete(supplier)}
+                    disabled={deletingId === supplier.id}
+                    className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                  >
+                    {deletingId === supplier.id ? 'Đang xóa...' : 'Xóa'}
                   </button>
                 </div>
               </td>
