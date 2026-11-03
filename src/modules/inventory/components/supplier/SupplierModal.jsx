@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Icon from '../../../../shared/components/Icon';
 
 const emptyForm = {
   supplierName: '',
@@ -15,7 +16,7 @@ const emptyForm = {
   status: 1,
 };
 
-const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave }) => {
+const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave, onDelete }) => {
   const [formData, setFormData] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -92,9 +93,9 @@ const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave }) => 
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-white"
+            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
           >
-            X
+            <Icon name="close" size={20} />
           </button>
         </div>
 
@@ -245,25 +246,46 @@ const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave }) => 
           )}
         </div>
 
-        {!isReadOnly && (
-          <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 p-6">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 p-6">
+          <div>
+            {supplier && (
+              <button
+                type="button"
+                onClick={() => { onDelete?.(supplier); onClose(); }}
+                className="flex items-center gap-1 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+              >
+                <Icon name="delete" size={18} />
+                Xóa
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onClose}
               className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              Hủy bỏ
+              {mode === 'detail' ? 'Đóng' : 'Hủy bỏ'}
             </button>
-            <button
-              type="submit"
-              form="supplierForm"
-              disabled={submitting}
-              className="rounded-xl bg-[#0f4c81] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black disabled:opacity-60"
-            >
-              {submitting ? 'Đang lưu...' : mode === 'edit' ? 'Lưu cập nhật' : 'Tạo mới'}
-            </button>
+            {mode !== 'detail' && (
+              <button
+                type="submit"
+                form="supplierForm"
+                disabled={submitting}
+                className="flex items-center gap-2 rounded-xl bg-[#0f4c81] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black disabled:opacity-60"
+              >
+                {submitting ? (
+                  'Đang lưu...'
+                ) : (
+                  <>
+                    <Icon name="save" size={18} />
+                    {mode === 'edit' ? 'Lưu cập nhật' : 'Tạo mới'}
+                  </>
+                )}
+              </button>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

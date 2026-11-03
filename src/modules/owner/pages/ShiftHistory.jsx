@@ -156,7 +156,12 @@ const ShiftHistory = () => {
       </div>
 
       {/* ==================== BẢNG DANH SÁCH ==================== */}
-      <ShiftTable shifts={shifts} loading={loading} onViewSummary={handleViewSummary} />
+      <ShiftTable
+        shifts={shifts}
+        loading={loading}
+        onViewSummary={handleViewSummary}
+        onClickRow={(row) => handleViewSummary(row.shiftId)}
+      />
 
       {/* ==================== PHÂN TRANG ==================== */}
       {!loading && totalPages > 0 && (
@@ -174,7 +179,11 @@ const ShiftHistory = () => {
                 <option value={100}>100 dòng</option>
               </select>
             </div>
-            <span>Tổng {pagination.totalCount || 0} ca bán</span>
+            <span>
+              {pagination.totalCount === 0 ? 0 : (filters.page - 1) * filters.pageSize + 1} -{' '}
+              {Math.min(filters.page * filters.pageSize, pagination.totalCount || 0)} trong tổng số{' '}
+              {pagination.totalCount || 0} ca bán
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button

@@ -117,17 +117,29 @@ const CategoryReturnPolicy = ({ branchId }) => {
     return cat?.productCount ?? null;
   };
 
+  const getCategoryId = (cat) => (typeof cat === 'string' ? null : cat?.id || null);
+
   // Các nhóm hàng đã được thiết lập (có ít nhất 1 trong 2 policy)
-  const configuredEntries = Object.entries(policies).filter(
-    ([_, vals]) => vals.returnDays || vals.exchangeDays
+  const configuredEntries = Object.values(policies).filter(
+    (vals) => vals.returnDays || vals.exchangeDays
   );
 
   // Các nhóm hàng chưa thiết lập policy nào
   const availableCategories = categories.filter((cat) => {
+    const id = getCategoryId(cat);
     const name = getCategoryName(cat);
-    const policy = policies[name];
+    const policy = policies[name] || (id ? policies[id] : null);
     return !policy || (!policy.returnDays && !policy.exchangeDays);
   });
+
+  const getCatIdByName = (name) => {
+    if (!name) return '';
+    const entry = policies[name];
+    if (entry) return entry.categoryId || '';
+    // Scan values
+    const found = Object.values(policies).find((p) => p.categoryName === name);
+    return found?.categoryId || '';
+  };
 
   const handleOpenAdd = () => {
     setEditCategory(null);
@@ -139,28 +151,37 @@ const CategoryReturnPolicy = ({ branchId }) => {
   };
 
   const handleOpenEdit = (catName) => {
+    const entry = policies[catName] || Object.values(policies).find((p) => p.categoryName === catName) || {};
     setEditCategory(catName);
-    const policy = policies[catName] || {};
     setFormCategory(catName);
-    setFormReturn(fromTotalDays(policy.returnDays));
-    setFormExchange(fromTotalDays(policy.exchangeDays));
+    setFormReturn(fromTotalDays(entry.returnDays));
+    setFormExchange(fromTotalDays(entry.exchangeDays));
     setShowModal(true);
   };
 
   const handleModalSave = async () => {
     const catName = editCategory || formCategory;
     if (!catName) return;
+    const catId = getCatIdByName(catName);
     const returnDays = toTotalDays(formReturn.value, formReturn.unit);
     const exchangeDays = toTotalDays(formExchange.value, formExchange.unit);
 
-    updatePolicy(catName, 'returnDays', String(returnDays));
-    updatePolicy(catName, 'exchangeDays', String(exchangeDays));
+    updatePolicy(catName, 'returnDays', String(returnDays), catId);
+    updatePolicy(catName, 'exchangeDays', String(exchangeDays), catId);
     // Sync ngay xuống localStorage để ReturnForm dùng được
-    syncToLocal(catName, String(returnDays), String(exchangeDays));
+    syncToLocal(catId || catName, catName, String(returnDays), String(exchangeDays));
 
     // Lưu lên backend ngay (không cần bấm "Lưu cài đặt")
-    const updated = { ...policies, [catName]: { returnDays: String(returnDays), exchangeDays: String(exchangeDays) } };
-    if (!returnDays && !exchangeDays) delete updated[catName];
+    // Xây dựng lại policies map từ policies hiện tại + thay đổi
+    const key = catId || catName;
+    const newEntry = {
+      categoryId: catId,
+      categoryName: catName,
+      returnDays: String(returnDays),
+      exchangeDays: String(exchangeDays),
+    };
+    const updated = { ...policies, [key]: newEntry };
+    if (!returnDays && !exchangeDays) delete updated[key];
     await savePolicies(updated);
 
     setShowModal(false);
@@ -169,24 +190,36 @@ const CategoryReturnPolicy = ({ branchId }) => {
 
   const handleDelete = async (catName) => {
     if (!window.confirm(`Xóa toàn bộ chính sách đổi/trả cho nhóm hàng "${catName}"?`)) return;
-    updatePolicy(catName, 'returnDays', '');
-    updatePolicy(catName, 'exchangeDays', '');
-    syncToLocal(catName, '', '');
+    const catId = getCatIdByName(catName);
+    updatePolicy(catName, 'returnDays', '', catId);
+    updatePolicy(catName, 'exchangeDays', '', catId);
+    syncToLocal(catId || catName, catName, '', '');
     // Lưu lên backend ngay
     const updated = { ...policies };
-    delete updated[catName];
+    const key = catId || catName;
+    delete updated[key];
     await savePolicies(updated);
   };
 
   // Sync policies xuống localStorage ngay lập tức (ko cần đợi bấm Lưu cài đặt)
-  const syncToLocal = (catName, returnDays, exchangeDays) => {
+  const syncToLocal = (key, catName, returnDays, exchangeDays) => {
     try {
       const raw = localStorage.getItem('pos_category_return_policies');
       const stored = raw ? JSON.parse(raw) : {};
+      const storeKey = key || catName;
       if (returnDays || exchangeDays) {
-        stored[catName] = { returnDays, exchangeDays };
+        stored[storeKey] = {
+          categoryId: key || '',
+          categoryName: catName || '',
+          returnDays,
+          exchangeDays,
+        };
       } else {
-        delete stored[catName];
+        delete stored[storeKey];
+        // Dọn dẹp entry cũ key bằng name nếu có
+        if (key && catName && stored[catName]) {
+          delete stored[catName];
+        }
       }
       localStorage.setItem('pos_category_return_policies', JSON.stringify(stored));
     } catch {}
@@ -278,19 +311,20 @@ const CategoryReturnPolicy = ({ branchId }) => {
                 <th className="pb-3 pr-4">SL SP</th>
                 <th className="pb-3 pr-4">Trả hàng</th>
                 <th className="pb-3 pr-4">Đổi hàng</th>
-                <th className="w-24 pb-3">Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {configuredEntries.map(([catName, vals]) => {
+              {configuredEntries.map((vals) => {
+                const catName = vals.categoryName || '';
                 const cat = categories.find((c) => getCategoryName(c) === catName);
                 const productCount = cat ? getCategoryProductCount(cat) : null;
                 return (
                   <tr
-                    key={catName}
-                    className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                    key={vals.categoryId || catName}
+                    className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-blue-50/70"
+                    onClick={() => handleOpenEdit(catName)}
                   >
-                    <td className="py-3 pr-4 font-medium text-slate-900">{catName}</td>
+                    <td className="py-3 pr-4 font-medium text-slate-900">{catName || vals.categoryId}</td>
                     <td className="py-3 pr-4 text-slate-500">
                       {productCount !== null ? `${productCount}` : '-'}
                     </td>
@@ -311,24 +345,6 @@ const CategoryReturnPolicy = ({ branchId }) => {
                       ) : (
                         <span className="text-slate-300">—</span>
                       )}
-                    </td>
-                    <td className="w-24 py-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleOpenEdit(catName)}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-600"
-                          title="Sửa"
-                        >
-                          <Icon name="edit" size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(catName)}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                          title="Xóa"
-                        >
-                          <Icon name="delete" size={15} />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 );
@@ -352,18 +368,31 @@ const CategoryReturnPolicy = ({ branchId }) => {
         title={editCategory ? 'Sửa chính sách nhóm hàng' : 'Thêm chính sách nhóm hàng'}
         size="md"
         footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
-              Hủy
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleModalSave}
-              disabled={editCategory ? false : !formCategory}
-            >
-              {editCategory ? 'Cập nhật' : 'Thêm'}
-            </Button>
-          </>
+          <div className="flex w-full items-center justify-between gap-3">
+            <div>
+              {editCategory && (
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-1 border-red-200 text-red-600 hover:bg-red-50"
+                  onClick={() => { handleDelete(editCategory); setShowModal(false); }}
+                >
+                  Xóa
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setShowModal(false)}>
+                Hủy
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleModalSave}
+                disabled={editCategory ? false : !formCategory}
+              >
+                {editCategory ? 'Cập nhật' : 'Thêm'}
+              </Button>
+            </div>
+          </div>
         }
       >
         <div className="space-y-5">
