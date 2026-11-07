@@ -205,7 +205,7 @@ const ExpenseDetailModal = ({ isOpen, onClose, selectedVoucher, handleConfirm, h
             <div>
               <div className="text-xs font-medium uppercase text-slate-400 dark:text-[#808080]">Nhóm chi phí</div>
               <div className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-[#e5e5e5]">
-                {detailVoucher.categoryName || '(Nhóm đã xóa)'}
+                {detailVoucher.categoryName}
               </div>
             </div>
             <div>

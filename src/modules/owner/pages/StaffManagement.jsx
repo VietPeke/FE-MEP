@@ -6,7 +6,6 @@ import { Button } from '../../../shared/components/Button';
 import { useStaffManager } from '../hooks/useStaffManager';
 import StaffTable from '../components/staff/StaffTable';
 import StaffModal from '../components/staff/StaffModal';
-import HiddenStaffsModal from '../components/staff/HiddenStaffsModal';
 import DeletedStaffsModal from '../components/staff/DeletedStaffsModal';
 
 const StaffManagement = () => {
@@ -17,6 +16,8 @@ const StaffManagement = () => {
     detailLoading,
     search,
     setSearch,
+    statusFilter,
+    setStatusFilter,
     page,
     setPage,
     pageSize,
@@ -33,8 +34,7 @@ const StaffManagement = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
-  const [isHiddenModalOpen, setIsHiddenModalOpen] = useState(false);
-  const [isDeletedModalOpen, setIsDeletedModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'deleted'
 
   const openCreateModal = () => {
     setEditingStaff(null);
@@ -79,23 +79,14 @@ const StaffManagement = () => {
     }
   };
 
-  // Ẩn nhanh từ row table (chỉ áp dụng cho ACTIVE)
-  const handleHideStaff = (id) => {
-    if (
-      !window.confirm(
-        'Bạn có chắc muốn ẨN nhân viên này? Họ sẽ được chuyển sang trang "Đã ẩn".'
-      )
-    )
-      return;
-    handleToggleStatus(id);
-  };
-
   const summary = useMemo(() => {
     const total = paginationMeta.totalCount || staffs.length;
     const active = staffs.filter((s) => s.isActive === 1).length;
     const inactive = staffs.filter((s) => s.isActive === 0).length;
     return { total, active, inactive };
   }, [staffs, paginationMeta.totalCount]);
+
+  const isDeletedMode = viewMode === 'deleted';
 
   return (
     <div className="animate-in fade-in w-full space-y-6 duration-200">
@@ -113,35 +104,13 @@ const StaffManagement = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-[#e5e5e5]">Quản lý Nhân sự</h1>
-          <p className="mt-1 text-gray-600 dark:text-[#999999]">
-            Tạo tài khoản và phân quyền cho nhân viên
-          </p>
+          <p className="mt-1 text-gray-600 dark:text-[#999999]">Tạo tài khoản và phân quyền cho nhân viên</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-3">
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
             {loading ? 'Đang tải...' : 'Sẵn sàng'}
           </span>
-          <Button
-            variant="outline"
-            onClick={() => setIsHiddenModalOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Icon name="eye-off" size={16} />
-            Đã ẩn
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setIsDeletedModalOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Icon name="history" size={16} />
-            Đã xóa
-          </Button>
-          <Button
-            variant="primary"
-            onClick={openCreateModal}
-            className="flex items-center gap-2"
-          >
+          <Button variant="primary" onClick={openCreateModal} className="flex items-center gap-2">
             <Icon name="add" size={20} />
             Thêm nhân viên
           </Button>
@@ -164,17 +133,47 @@ const StaffManagement = () => {
         </Card>
         <Card>
           <div className="py-4 text-center">
-            <div className="text-3xl font-bold text-slate-500 dark:text-[#999999]">
-              {summary.inactive}
-            </div>
+            <div className="text-3xl font-bold text-slate-500 dark:text-[#999999]">{summary.inactive}</div>
             <p className="mt-1 text-sm text-gray-600 dark:text-[#999999]">Đã ẩn</p>
           </div>
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Search & Filter */}
       <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-[#333333] dark:bg-[#1a1a1a]/60">
-        <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#999999]">
+              <Icon name="filter" size={14} /> Trạng thái:
+            </span>
+            {[
+              { key: 'active', label: 'Đang hoạt động' },
+              { key: 'all', label: 'Tất cả' },
+              { key: 'deleted', label: 'Đã ẩn' },
+            ].map((tab) => (
+              <Button
+                key={tab.key}
+                variant={statusFilter === tab.key && viewMode === 'list' ? 'primary' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setViewMode('list');
+                  setStatusFilter(tab.key);
+                  setPage(1);
+                }}
+              >
+                {tab.label}
+              </Button>
+            ))}
+            <Button
+              variant={isDeletedMode ? 'danger' : 'outline'}
+              size="sm"
+              onClick={() => { setViewMode('deleted'); setStatusFilter('all'); }}
+              className="flex items-center gap-1"
+            >
+              <Icon name="delete" size={14} /> Đã xóa
+            </Button>
+          </div>
+
           <div className="w-full md:w-72">
             <Input
               placeholder="Tìm theo tên, email, SĐT..."
@@ -189,62 +188,66 @@ const StaffManagement = () => {
         </div>
       </div>
 
-      <StaffTable
-        staffs={staffs}
-        loading={loading}
-        currentUserId={currentUserId}
-        showRowActions={false}
-        showHideAction
-        onHide={handleHideStaff}
-        onClickRow={(row) => handleViewDetailClick(row)}
-      />
+      {viewMode === 'list' ? (
+        <>
+          <StaffTable
+            staffs={staffs}
+            loading={loading}
+            currentUserId={currentUserId}
+            onClickRow={(row) => handleViewDetailClick(row)}
+          />
 
-      {paginationMeta.totalPages > 0 && (
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#1a1a1a] px-5 py-3 shadow-sm">
-          <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-[#b3b3b3]">
-            <div className="flex items-center gap-2">
-              <span>Hiển thị</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="rounded border border-slate-300 dark:border-[#404040] dark:bg-[#1a1a1a] dark:text-[#d4d4d4] px-2 py-1 text-xs outline-none focus:border-primary"
-              >
-                <option value={20}>20 dòng</option>
-                <option value={50}>50 dòng</option>
-                <option value={100}>100 dòng</option>
-              </select>
+          {paginationMeta.totalPages > 0 && (
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#1a1a1a] px-5 py-3 shadow-sm">
+              <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-[#b3b3b3]">
+                <div className="flex items-center gap-2">
+                  <span>Hiển thị</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                    className="rounded border border-slate-300 dark:border-[#404040] dark:bg-[#1a1a1a] dark:text-[#d4d4d4] px-2 py-1 text-xs outline-none focus:border-primary"
+                  >
+                    <option value={20}>20 dòng</option>
+                    <option value={50}>50 dòng</option>
+                    <option value={100}>100 dòng</option>
+                  </select>
+                </div>
+                <span>
+                  {paginationMeta.totalCount === 0 ? 0 : (page - 1) * pageSize + 1} -{' '}
+                  {Math.min(page * pageSize, paginationMeta.totalCount)} trong tổng số{' '}
+                  {paginationMeta.totalCount} nhân viên
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="rounded-lg border border-slate-300 dark:border-[#404040] dark:bg-[#1a1a1a] px-2 py-1 text-slate-600 dark:text-[#b3b3b3] hover:bg-slate-50 dark:hover:bg-[#333333] disabled:opacity-50"
+                >
+                  <Icon name="chevron_left" className="text-[18px]" />
+                </button>
+                <div className="px-3 text-sm text-slate-700 dark:text-[#b3b3b3]">
+                  Trang {page} / {paginationMeta.totalPages}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(paginationMeta.totalPages, p + 1))}
+                  disabled={page >= paginationMeta.totalPages}
+                  className="rounded-lg border border-slate-300 dark:border-[#404040] dark:bg-[#1a1a1a] px-2 py-1 text-slate-600 dark:text-[#b3b3b3] hover:bg-slate-50 dark:hover:bg-[#333333] disabled:opacity-50"
+                >
+                  <Icon name="chevron_right" className="text-[18px]" />
+                </button>
+              </div>
             </div>
-            <span>
-              {paginationMeta.totalCount === 0 ? 0 : (page - 1) * pageSize + 1} -{' '}
-              {Math.min(page * pageSize, paginationMeta.totalCount)} trong tổng số{' '}
-              {paginationMeta.totalCount} nhân viên
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded-lg border border-slate-300 dark:border-[#404040] dark:bg-[#1a1a1a] px-2 py-1 text-slate-600 dark:text-[#b3b3b3] hover:bg-slate-50 dark:hover:bg-[#333333] disabled:opacity-50"
-            >
-              <Icon name="chevron_left" className="text-[18px]" />
-            </button>
-            <div className="px-3 text-sm text-slate-700 dark:text-[#b3b3b3]">
-              Trang {page} / {paginationMeta.totalPages}
-            </div>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(paginationMeta.totalPages, p + 1))}
-              disabled={page >= paginationMeta.totalPages}
-              className="rounded-lg border border-slate-300 dark:border-[#404040] dark:bg-[#1a1a1a] px-2 py-1 text-slate-600 dark:text-[#b3b3b3] hover:bg-slate-50 dark:hover:bg-[#333333] disabled:opacity-50"
-            >
-              <Icon name="chevron_right" className="text-[18px]" />
-            </button>
-          </div>
-        </div>
+          )}
+        </>
+      ) : (
+        <DeletedStaffsModal
+          onAction={() => {
+            refetch();
+          }}
+        />
       )}
 
       <StaffModal
@@ -253,18 +256,8 @@ const StaffManagement = () => {
         staff={editingStaff}
         permissions={permissions}
         onSave={onSave}
-      />
-
-      <HiddenStaffsModal
-        isOpen={isHiddenModalOpen}
-        onClose={() => setIsHiddenModalOpen(false)}
-        onAction={() => refetch()}
-      />
-
-      <DeletedStaffsModal
-        isOpen={isDeletedModalOpen}
-        onClose={() => setIsDeletedModalOpen(false)}
-        onAction={() => refetch()}
+        onToggleStatus={handleToggleStatus}
+        onDelete={handleDeleteStaff}
       />
     </div>
   );
