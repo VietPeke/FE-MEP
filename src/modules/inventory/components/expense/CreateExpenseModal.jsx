@@ -7,12 +7,13 @@ import { Save } from 'lucide-react';
 
 const EMPTY_FORM = {
   categoryId: '',
+  supplierId: '',
   amount: '',
   reason: '',
   note: '',
 };
 
-const CreateExpenseModal = ({ isOpen, onClose, handleCreate, categories }) => {
+const CreateExpenseModal = ({ isOpen, onClose, handleCreate, categories, suppliers }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -45,6 +46,7 @@ const CreateExpenseModal = ({ isOpen, onClose, handleCreate, categories }) => {
     try {
       await handleCreate({
         categoryId: form.categoryId,
+        supplierId: form.supplierId || null,
         amount: Number(form.amount),
         reason: form.reason.trim(),
         note: form.note?.trim() || null,
@@ -107,6 +109,24 @@ const CreateExpenseModal = ({ isOpen, onClose, handleCreate, categories }) => {
                   {c.categoryName}
                 </option>
               ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-[#b3b3b3]">
+            Nhà cung cấp (nếu có)
+          </label>
+          <select
+            value={form.supplierId}
+            onChange={(e) => setForm((f) => ({ ...f, supplierId: e.target.value }))}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#004785] dark:border-[#404040] dark:bg-[#1a1a1a] dark:text-[#e5e5e5]"
+          >
+            <option value="">-- Không áp dụng --</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
 

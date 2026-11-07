@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '../../../shared/components/Button';
 import { Plus, AlertCircle } from 'lucide-react';
 
 import { useExpense } from '../hooks/useExpense';
 import { useExpenseCategory } from '../hooks/useExpenseCategory';
+import { getSuppliers } from '../services/supplierService';
 
 // Import Các Components đã tách
 import ExpenseStats from '../components/expense/ExpenseStats';
@@ -19,6 +20,8 @@ const ExpenseManagement = () => {
     error,
     categoryId,
     setCategoryId,
+    supplierId,
+    setSupplierId,
     status,
     setStatus,
     fromDate,
@@ -41,6 +44,7 @@ const ExpenseManagement = () => {
   } = useExpense();
 
   const { categories } = useExpenseCategory();
+  const [suppliers, setSuppliers] = useState([]);
 
   // State quản lý UI
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -48,6 +52,19 @@ const ExpenseManagement = () => {
 
   // State xử lý Detail Modal & Action
   const [selectedVoucher, setSelectedVoucher] = useState(null);
+
+  const fetchActiveSuppliers = useCallback(async () => {
+    try {
+      const res = await getSuppliers({ status: 'active', pageNumber: 1, pageSize: 200 });
+      setSuppliers(res?.data?.items || res?.items || []);
+    } catch (err) {
+      console.error('Không tải được danh sách nhà cung cấp', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActiveSuppliers();
+  }, [fetchActiveSuppliers]);
 
   const summary = useMemo(() => {
     const totalAmount = vouchers.reduce((sum, v) => sum + Number(v.amount || 0), 0);
@@ -100,6 +117,8 @@ const ExpenseManagement = () => {
         setStatus={setStatus}
         categoryId={categoryId}
         setCategoryId={setCategoryId}
+        supplierId={supplierId}
+        setSupplierId={setSupplierId}
         fromDate={fromDate}
         setFromDate={setFromDate}
         toDate={toDate}
@@ -112,6 +131,7 @@ const ExpenseManagement = () => {
         refetch={refetch}
         loading={loading}
         categories={categories}
+        suppliers={suppliers}
         showFilterDrawer={showFilterDrawer}
         setShowFilterDrawer={setShowFilterDrawer}
       />
@@ -134,6 +154,7 @@ const ExpenseManagement = () => {
         onClose={() => setShowCreateModal(false)}
         handleCreate={handleCreate}
         categories={categories}
+        suppliers={suppliers}
       />
 
       {/* MODAL XEM CHI TIẾT (Kèm xử lý Duyệt & Hủy) */}
