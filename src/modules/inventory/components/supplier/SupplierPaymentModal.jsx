@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../../shared/components/Icon';
-import { Button } from '../../../../shared/components/Button';
 
 const emptyForm = {
   supplierId: '',
@@ -14,12 +13,10 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
   const [formData, setFormData] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [displayAmount, setDisplayAmount] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setFormData(emptyForm);
-      setDisplayAmount('');
       setError('');
     }
   }, [isOpen]);
@@ -29,25 +26,6 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const formatWithDots = (val) => {
-    if (!val) return '';
-    return Number(val).toLocaleString('vi-VN');
-  };
-
-  const handleAmountChange = (e) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    setFormData((prev) => ({ ...prev, amount: raw }));
-    setDisplayAmount(formatWithDots(raw));
-  };
-
-  const handleAmountBlur = () => {
-    setDisplayAmount(formatWithDots(formData.amount));
-  };
-
-  const handleAmountFocus = () => {
-    setDisplayAmount(formData.amount);
   };
 
   const handleSubmit = async (e) => {
@@ -67,7 +45,7 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
       await onSave(payload);
       onClose();
     } catch (err) {
-      setError(err?.data?.message || err.message || 'Lỗi khi tạo phiếu chi');
+      setError(err?.data?.message || err.message || 'Lỗi khi tạo phiếu thanh toán NCC');
     } finally {
       setSubmitting(false);
     }
@@ -76,21 +54,19 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
   return (
     <div className="animate-fade-in fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4">
       <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-[#1a1a1a]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4 dark:border-[#333] dark:bg-[#1a1a1a]">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4 dark:border-[#333333] dark:bg-[#1a1a1a]">
           <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-[#e5e5e5]">
             <Icon name="payments" className="text-orange-500" />
-            Lập Phiếu Chi Tiền
+            Lập Phiếu Thanh Toán NCC
           </h2>
           <button
             onClick={onClose}
-            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:text-[#808080] dark:hover:bg-[#333] dark:hover:text-[#b3b3b3]"
+            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:text-[#808080] dark:hover:bg-[#333333] dark:hover:text-[#b3b3b3]"
           >
             <Icon name="close" size={20} />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 bg-slate-50/50 p-6 dark:bg-[#0f0f0f]/50">
           {error && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400">
@@ -124,14 +100,13 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
                 Số tiền (VNĐ) <span className="text-red-500">*</span>
               </span>
               <input
-                type="text"
+                type="number"
                 name="amount"
-                value={displayAmount}
-                onChange={handleAmountChange}
-                onBlur={handleAmountBlur}
-                onFocus={handleAmountFocus}
+                min="1"
+                value={formData.amount}
+                onChange={handleChange}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 font-bold text-slate-900 outline-none focus:border-blue-500 dark:border-[#404040] dark:bg-[#272727] dark:text-[#e5e5e5]"
-                placeholder="VD: 5.000.000"
+                placeholder="VD: 5000000"
                 required
               />
             </label>
@@ -176,23 +151,21 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
             />
           </label>
 
-          {/* Footer buttons */}
-          <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-[#333]">
-            <Button
+          <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-[#333333]">
+            <button
               type="button"
-              variant="secondary"
-              size="sm"
               onClick={onClose}
+              className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-[#404040] dark:bg-[#272727] dark:text-[#b3b3b3] dark:hover:bg-[#404040]"
             >
               Hủy bỏ
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
               disabled={submitting}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
             >
               {submitting ? 'Đang xử lý...' : 'Xác nhận Chi Tiền'}
-            </Button>
+            </button>
           </div>
         </form>
       </div>
