@@ -15,6 +15,7 @@ export const useExpense = () => {
 
   // Bộ lọc & phân trang
   const [categoryId, setCategoryId] = useState('');
+  const [supplierId, setSupplierId] = useState('');
   const [status, setStatus] = useState('ALL');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -30,6 +31,7 @@ export const useExpense = () => {
     try {
       const filters = {
         categoryId: categoryId || undefined,
+        supplierId: supplierId || undefined,
         status: status && status !== 'ALL' ? status : undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
@@ -53,7 +55,7 @@ export const useExpense = () => {
     } finally {
       setLoading(false);
     }
-  }, [categoryId, status, fromDate, toDate, sort, order, pageNumber, pageSize]);
+  }, [categoryId, supplierId, status, fromDate, toDate, sort, order, pageNumber, pageSize]);
 
   useEffect(() => {
     fetchVouchers();
@@ -85,6 +87,8 @@ export const useExpense = () => {
 
     categoryId,
     setCategoryId,
+    supplierId,
+    setSupplierId,
     status,
     setStatus,
     fromDate,

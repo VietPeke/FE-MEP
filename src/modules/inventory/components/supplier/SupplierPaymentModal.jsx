@@ -13,10 +13,12 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
   const [formData, setFormData] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [displayAmount, setDisplayAmount] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setFormData(emptyForm);
+      setDisplayAmount('');
       setError('');
     }
   }, [isOpen]);
@@ -26,6 +28,25 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const formatWithDots = (val) => {
+    if (!val) return '';
+    return Number(val).toLocaleString('vi-VN');
+  };
+
+  const handleAmountChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    setFormData((prev) => ({ ...prev, amount: raw }));
+    setDisplayAmount(formatWithDots(raw));
+  };
+
+  const handleAmountBlur = () => {
+    setDisplayAmount(formatWithDots(formData.amount));
+  };
+
+  const handleAmountFocus = () => {
+    setDisplayAmount(formData.amount);
   };
 
   const handleSubmit = async (e) => {
@@ -45,7 +66,7 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
       await onSave(payload);
       onClose();
     } catch (err) {
-      setError(err?.data?.message || err.message || 'Lỗi khi tạo phiếu thanh toán NCC');
+      setError(err?.data?.message || err.message || 'Lỗi khi tạo phiếu chi');
     } finally {
       setSubmitting(false);
     }
@@ -57,7 +78,7 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4 dark:border-[#333333] dark:bg-[#1a1a1a]">
           <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-[#e5e5e5]">
             <Icon name="payments" className="text-orange-500" />
-            Lập Phiếu Thanh Toán NCC
+            Lập Phiếu Chi Tiền
           </h2>
           <button
             onClick={onClose}
@@ -100,13 +121,14 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
                 Số tiền (VNĐ) <span className="text-red-500">*</span>
               </span>
               <input
-                type="number"
+                type="text"
                 name="amount"
-                min="1"
-                value={formData.amount}
-                onChange={handleChange}
+                value={displayAmount}
+                onChange={handleAmountChange}
+                onBlur={handleAmountBlur}
+                onFocus={handleAmountFocus}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 font-bold text-slate-900 outline-none focus:border-blue-500 dark:border-[#404040] dark:bg-[#272727] dark:text-[#e5e5e5]"
-                placeholder="VD: 5000000"
+                placeholder="VD: 5.000.000"
                 required
               />
             </label>

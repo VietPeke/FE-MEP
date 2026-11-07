@@ -58,20 +58,23 @@ export const useStaffManager = () => {
     setLoading(true);
     setError('');
     try {
-      // BE ưu tiên tham số view (active|hidden|deleted)
-      // Status UI: 'active' → view=active, 'inactive' → view=hidden, 'deleted' → view=deleted
-      const viewParam =
-        statusFilter === 'inactive'
-          ? 'hidden'
-          : statusFilter === 'deleted'
-            ? 'deleted'
-            : 'active';
+      let isActiveParam = undefined;
+      let isDeletedParam = undefined;
+      
+      if (statusFilter === 'active') {
+        isActiveParam = true;
+      } else if (statusFilter === 'inactive') {
+        isActiveParam = false;
+      } else if (statusFilter === 'deleted') {
+        isDeletedParam = true;
+      }
 
-      const response = await getStaffs({
-        page,
-        pageSize,
-        search,
-        view: viewParam,
+      const response = await getStaffs({ 
+        page, 
+        pageSize, 
+        search, 
+        isActive: isActiveParam,
+        isDeleted: isDeletedParam 
       });
       if (response?.success && response?.data) {
         setStaffs(response.data.items || []);
@@ -146,7 +149,7 @@ export const useStaffManager = () => {
     }
   };
 
-  const handleToggleStatus = async (id, onSuccess) => {
+  const handleToggleStatus = async (id) => {
     if (!window.confirm('Bạn có chắc muốn thay đổi trạng thái hoạt động của nhân viên này?'))
       return;
     try {
@@ -154,14 +157,13 @@ export const useStaffManager = () => {
       if (response?.success) {
         alert(response.message);
         fetchStaffs();
-        onSuccess?.();
       }
     } catch (err) {
       alert(formatApiError(err, 'Lỗi khi đổi trạng thái nhân viên.'));
     }
   };
 
-  const handleDeleteStaff = async (id, onSuccess) => {
+  const handleDeleteStaff = async (id) => {
     // Bước 1: Gọi API check-relations
     let checkResult;
     try {
@@ -201,7 +203,6 @@ export const useStaffManager = () => {
       if (response?.success) {
         alert(response.message || 'Đã xóa nhân viên.');
         fetchStaffs();
-        onSuccess?.();
       }
     } catch (err) {
       alert(formatApiError(err, 'Lỗi khi xóa nhân viên.'));
