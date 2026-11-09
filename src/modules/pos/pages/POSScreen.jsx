@@ -5,6 +5,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useOutletContext, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../shared/hooks/useAuth';
+import { hasRole } from '../../../shared/utils/roleRedirect';
 import PosCartPanel from '../components/cart/PosCartPanel';
 import ProductGrid from '../components/product/ProductGrid';
 import CustomerBar from '../components/customer/CustomerBar';
@@ -16,7 +17,6 @@ import ReceiptModal from '../components/order/ReceiptModal';
 import CustomerPickerModal from '../components/customer/CustomerPickerModal';
 import Icon from '../../../shared/components/Icon';
 import QuickAddCustomerModal from '../components/customer/QuickAddCustomerModal';
-import StorePolicyModal from '../components/StorePolicyModal';
 import { usePosCart } from '../hooks/usePosCart';
 import { usePosProducts } from '../hooks/usePosProducts';
 import { usePosProductList } from '../hooks/usePosProductList';
@@ -112,7 +112,6 @@ const POSScreen = () => {
   // UOM: Unit selector modal
   const [showUnitSelector, setShowUnitSelector] = useState(false);
   const [selectedProductForUnit, setSelectedProductForUnit] = useState(null);
-  const [showStorePolicy, setShowStorePolicy] = useState(false);
 
   // Discount tiers
   const [discountTiers, setDiscountTiers] = useState([]);
@@ -161,7 +160,7 @@ const POSScreen = () => {
   }, [posProducts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const userRoles = Array.isArray(user?.roles) ? user?.roles : user?.role ? [user?.role] : [];
-  const isOwner = userRoles.some((r) => r.toLowerCase() === 'owner');
+  const isOwner = hasRole(userRoles, 'Owner');
   const hasSaleCreate = user?.permissions?.includes('SALE_CREATE') || isOwner;
   const { filteredProducts } = usePosProducts(posProducts, 'Tất cả', search);
 
@@ -509,34 +508,7 @@ const POSScreen = () => {
     } catch (err) {
       console.error('Lỗi tạo đơn:', err);
       showNotice('Lỗi: ' + (err.message || 'Không thể tạo đơn hàng'));
-      // Fallback: vẫn hiển thị mock nếu API lỗi
-      const order = {
-        id:
-          'POS-' +
-          new Date().toISOString().slice(0, 10).replace(/-/g, '') +
-          '-' +
-          String(orderCounter).padStart(3, '0'),
-        date: new Date().toISOString(),
-        items: [...cart.cart],
-        subtotal: cart.subtotal,
-        discount: discountInfo?.discountAmount || 0,
-
-        total: finalTotal,
-        payLines: lines.map((l) => ({
-          method: PAYMENT_LABELS[l.method.toLowerCase()] || l.method,
-          amount: l.amount,
-        })),
-        totalPaid: totalPaidAmount,
-        change: Math.max(0, totalPaidAmount - finalTotal),
-        customer: selectedCustomer ? selectedCustomer.name : 'Khách lẻ',
-      };
-      setLastOrder(order);
-      setOrderCounter((c) => c + 1);
       setShowPayModal(false);
-      setShowSuccess(true);
-      cart.clearCart();
-      setSelectedCustomer(null);
-      refetchProducts();
     } finally {
       setPaying(false);
     }
@@ -1075,14 +1047,6 @@ const POSScreen = () => {
               {productsLoading && posProducts.length > 0 && (
                 <div className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600"></div>
               )}
-              <button
-                type="button"
-                onClick={() => setShowStorePolicy(true)}
-                title="Chính sách cửa hàng"
-                className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-500 hover:border-[#004785] hover:text-[#004785] dark:border-[#444] dark:bg-[#272727] dark:text-[#999] dark:hover:border-blue-400 dark:hover:text-blue-400"
-              >
-                <Icon name="policy" size={14} />
-              </button>
             </div>
           </div>
           <div className="custom-scrollbar relative flex-1 overflow-y-auto px-2 py-2">
@@ -1190,11 +1154,6 @@ const POSScreen = () => {
         isOpen={showQuickAddCust}
         onClose={() => setShowQuickAddCust(false)}
         onAdd={handleQuickAddCustomer}
-      />
-
-      <StorePolicyModal
-        isOpen={showStorePolicy}
-        onClose={() => setShowStorePolicy(false)}
       />
     </>
   );
