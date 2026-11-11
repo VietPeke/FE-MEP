@@ -23,7 +23,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onSave }) => {
       setForm({ code: '', name: '', phone: '', address: '' });
       onClose();
     } catch {
-      alert('Không thể thêm Đối tượng');
+      alert('Khong the them Đối tượng');
     } finally {
       setSaving(false);
     }
@@ -50,7 +50,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onSave }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-[#999999]">
-                Mã Khách hàng
+                Mã KHach hang
               </label>
               <input
                 type="text"
@@ -62,12 +62,12 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onSave }) => {
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-[#999999]">
-                Tên Khách hàng <span className="text-red-400">*</span>
+                Tên KHach hang <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-[#404040] dark:bg-[#272727] dark:text-[#e5e5e5]"
-                placeholder="Nhập tên..."
+                placeholder="Nhập ten..."
                 value={form.name}
                 onChange={(e) => handleChange('name', e.target.value)}
               />
@@ -76,7 +76,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onSave }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-[#999999]">
-                Số điện thoại
+                So dien thoai
               </label>
               <input
                 type="text"
@@ -93,7 +93,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onSave }) => {
               <input
                 type="text"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-[#404040] dark:bg-[#272727] dark:text-[#e5e5e5]"
-                placeholder="Nhập địa chỉ..."
+                placeholder="Nhập dia chi..."
                 value={form.address}
                 onChange={(e) => handleChange('address', e.target.value)}
               />
@@ -108,7 +108,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onSave }) => {
             className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-[#404040] dark:bg-[#272727] dark:text-[#b3b3b3] dark:hover:bg-[#404040]"
             onClick={onClose}
           >
-            Hủy
+            Huy
           </button>
           <button
             type="button"
@@ -116,7 +116,7 @@ const QuickAddCustomerModal = ({ isOpen, onClose, onSave }) => {
             onClick={handleSave}
             disabled={!form.name.trim() || saving}
           >
-            {saving ? 'Đang lưu...' : 'Lưu'}
+            {saving ? 'Đang lưu...' : 'Luu'}
           </button>
         </div>
       </div>

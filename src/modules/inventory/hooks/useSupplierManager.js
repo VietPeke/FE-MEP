@@ -6,7 +6,6 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
-  toggleSupplierStatus,
 } from '../services/supplierService';
 
 export const useSupplierManager = () => {
@@ -103,15 +102,6 @@ export const useSupplierManager = () => {
     await loadSuppliers();
   };
 
-  /**
-   * Toggle trạng thái hợp tác NCC: "active" ↔ "inactive"
-   * FE truyền targetStatus ("active" hoặc "inactive") để BE set chính xác.
-   */
-  const handleToggleStatus = async (id, targetStatus) => {
-    await toggleSupplierStatus(id, targetStatus);
-    await loadSuppliers();
-  };
-
   return {
     suppliers: filteredSuppliers, // Trả ra danh sách đã lọc
     loading,
@@ -129,6 +119,5 @@ export const useSupplierManager = () => {
     handleCreate,
     handleUpdate,
     handleDelete,
-    handleToggleStatus,
   };
 };

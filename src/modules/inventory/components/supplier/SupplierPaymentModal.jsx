@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../../shared/components/Icon';
-import { Button } from '../../../../shared/components/Button';
 
 const emptyForm = {
   supplierId: '',
@@ -10,19 +9,15 @@ const emptyForm = {
   note: '',
 };
 
-const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers, debts = [] }) => {
+const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers }) => {
   const [formData, setFormData] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [displayAmount, setDisplayAmount] = useState('');
-  const [selectedDebt, setSelectedDebt] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
       setFormData(emptyForm);
-      setDisplayAmount('');
       setError('');
-      setSelectedDebt(null);
     }
   }, [isOpen]);
 
@@ -31,46 +26,6 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers, debts = [] }
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (name === 'supplierId') {
-      const supplier = suppliers.find((s) => String(s.id) === String(value));
-      const debt = supplier
-        ? debts.find(
-            (d) =>
-              String(d.id) === String(value) ||
-              String(d.id) === String(supplier.id) ||
-              (d.name && supplier.name && d.name === supplier.name)
-          )
-        : null;
-      setSelectedDebt(debt || null);
-    }
-  };
-
-  const formatWithDots = (val) => {
-    if (!val) return '';
-    return Number(val).toLocaleString('vi-VN');
-  };
-
-  const handleAmountChange = (e) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    let numVal = Number(raw) || 0;
-    const maxDebt = selectedDebt ? Number(selectedDebt.closingDebt || 0) : 0;
-    if (maxDebt > 0 && numVal > maxDebt) {
-      numVal = maxDebt;
-      setError(`Số tiền không được vượt quá dư nợ (${formatWithDots(maxDebt)} VNĐ).`);
-    } else {
-      setError('');
-    }
-    const val = numVal > 0 ? String(numVal) : raw;
-    setFormData((prev) => ({ ...prev, amount: val }));
-    setDisplayAmount(formatWithDots(val));
-  };
-
-  const handleAmountBlur = () => {
-    setDisplayAmount(formatWithDots(formData.amount));
-  };
-
-  const handleAmountFocus = () => {
-    setDisplayAmount(formData.amount);
   };
 
   const handleSubmit = async (e) => {
@@ -87,51 +42,31 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers, debts = [] }
       if (!payload.supplierId) throw new Error('Vui lòng chọn nhà cung cấp');
       if (payload.amount <= 0) throw new Error('Số tiền thanh toán phải lớn hơn 0');
 
-      // Kiểm tra nợ: nếu NCC không còn nợ thì không cho lập phiếu
-      if (selectedDebt && Number(selectedDebt.closingDebt || 0) <= 0) {
-        throw new Error('Nhà cung cấp này không còn nợ, không thể lập phiếu chi.');
-      }
-      if (selectedDebt && payload.amount > Number(selectedDebt.closingDebt || 0)) {
-        throw new Error(
-          `Số tiền thanh toán vượt quá dư nợ hiện tại (${formatWithDots(selectedDebt.closingDebt)} VNĐ).`
-        );
-      }
-
       await onSave(payload);
       onClose();
     } catch (err) {
-      setError(err?.data?.message || err.message || 'Lỗi khi tạo phiếu thanh toán NCC');
+      setError(err?.data?.message || err.message || 'Lỗi khi tạo phiếu chi');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const debtInfo = selectedDebt
-    ? `Dư nợ: ${formatWithDots(selectedDebt.closingDebt)} VNĐ`
-    : formData.supplierId
-      ? ''
-      : null;
-
-  const hasNoDebt = selectedDebt && Number(selectedDebt.closingDebt || 0) <= 0;
-
   return (
     <div className="animate-fade-in fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-4">
       <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-[#1a1a1a]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4 dark:border-[#333] dark:bg-[#1a1a1a]">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4 dark:border-[#333333] dark:bg-[#1a1a1a]">
           <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-[#e5e5e5]">
             <Icon name="payments" className="text-orange-500" />
-            Lập Phiếu Thanh Toán NCC
+            Lập Phiếu Chi Tiền
           </h2>
           <button
             onClick={onClose}
-            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:text-[#808080] dark:hover:bg-[#333] dark:hover:text-[#b3b3b3]"
+            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:text-[#808080] dark:hover:bg-[#333333] dark:hover:text-[#b3b3b3]"
           >
             <Icon name="close" size={20} />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 bg-slate-50/50 p-6 dark:bg-[#0f0f0f]/50">
           {error && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400">
@@ -157,11 +92,6 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers, debts = [] }
                 </option>
               ))}
             </select>
-            {debtInfo && (
-              <p className={`mt-1 text-xs ${hasNoDebt ? 'text-red-500 font-semibold' : 'text-amber-600 dark:text-amber-400'}`}>
-                {hasNoDebt ? 'Nhà cung cấp này không còn nợ, không thể lập phiếu chi.' : debtInfo}
-              </p>
-            )}
           </label>
 
           <div className="grid grid-cols-2 gap-4">
@@ -170,14 +100,13 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers, debts = [] }
                 Số tiền (VNĐ) <span className="text-red-500">*</span>
               </span>
               <input
-                type="text"
+                type="number"
                 name="amount"
-                value={displayAmount}
-                onChange={handleAmountChange}
-                onBlur={handleAmountBlur}
-                onFocus={handleAmountFocus}
+                min="1"
+                value={formData.amount}
+                onChange={handleChange}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 font-bold text-slate-900 outline-none focus:border-blue-500 dark:border-[#404040] dark:bg-[#272727] dark:text-[#e5e5e5]"
-                placeholder="VD: 5.000.000"
+                placeholder="VD: 5000000"
                 required
               />
             </label>
@@ -222,23 +151,21 @@ const SupplierPaymentModal = ({ isOpen, onClose, onSave, suppliers, debts = [] }
             />
           </label>
 
-          {/* Footer buttons */}
-          <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-[#333]">
-            <Button
+          <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-[#333333]">
+            <button
               type="button"
-              variant="secondary"
-              size="sm"
               onClick={onClose}
+              className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-[#404040] dark:bg-[#272727] dark:text-[#b3b3b3] dark:hover:bg-[#404040]"
             >
               Hủy bỏ
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
-              disabled={submitting || hasNoDebt}
-              className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50"
+              disabled={submitting}
+              className="flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
             >
-              {hasNoDebt ? 'Không thể lập phiếu' : submitting ? 'Đang xử lý...' : 'Xác nhận Chi Tiền'}
-            </Button>
+              {submitting ? 'Đang xử lý...' : 'Xác nhận Chi Tiền'}
+            </button>
           </div>
         </form>
       </div>

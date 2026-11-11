@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Icon from '../../../../shared/components/Icon';
 import { getProducts } from '../../services/inventoryService';
 import { useAuth } from '../../../../shared/hooks/useAuth';
-import { hasRole } from '../../../../shared/utils/roleRedirect';
 import { getStaffs } from '../../../owner/services/staffService';
 
 // Import Shared Components
@@ -20,7 +19,7 @@ import Table from '../../../../shared/components/Table';
  */
 const CreateCheckModal = ({ isOpen, onClose, onSave }) => {
   const { user } = useAuth();
-  const isOwner = hasRole(user?.roles, 'Owner') || user?.role === 'Owner';
+  const isOwner = user?.roles?.includes('Owner') || user?.role === 'Owner';
   const currentUserId = user?.userId || user?.id;
 
   const [products, setProducts] = useState([]);
@@ -83,8 +82,8 @@ const CreateCheckModal = ({ isOpen, onClose, onSave }) => {
           // Chỉ hiển thị staff có quyền fill phiếu (STOCK_CHECK_CREATE) hoặc Owner
           const qualified = allStaff.filter((staff) => {
             const hasInventoryRole =
-              hasRole(staff.roles, 'InventoryStaff') ||
-              hasRole(staff.roles, 'Owner') ||
+              staff.roles?.includes('InventoryStaff') ||
+              staff.roles?.includes('Owner') ||
               staff.role === 'Owner';
             const hasPermission =
               staff.permissionCodes?.includes('STOCK_CHECK_CREATE') ||
