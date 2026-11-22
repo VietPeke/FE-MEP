@@ -380,12 +380,19 @@ export const OwnerReports = () => {
     };
   }, [categoryId, categories]);
 
-  // Khi chuyển tab báo cáo hoặc đổi supplier → load lại báo cáo
+  // Khi chuyển tab báo cáo → load lại báo cáo mới
   // loadReport là stable useCallback nên không cần eslint-disable
   useEffect(() => {
     if (selectedReport === 'supplier-detail' && !supplierId) return;
     loadReport();
-  }, [selectedReport, supplierId, loadReport]);
+  }, [selectedReport, loadReport]);
+
+  // Khi supplierId được chọn lần đầu → auto load báo cáo nhà cung cấp
+  useEffect(() => {
+    if (selectedReport === 'supplier-detail' && supplierId) {
+      loadReport();
+    }
+  }, [supplierId]); // eslint-disable-line react-hooks/exhaustive-deps -- chỉ trigger khi supplierId thay đổi, không theo loadReport để tránh loop
 
   // ============ RENDER ============
   return (

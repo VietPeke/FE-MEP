@@ -6,24 +6,67 @@ const ProductWarehouseTab = ({ p }) => (
     <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">Thông tin kho</h3>
     <div className="grid grid-cols-2 gap-3">
       <label className="block">
-        <span className="text-sm font-semibold text-slate-700">Tồn kho</span>
-        <input
-          type="number"
-          className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2.5 text-sm outline-none"
-          value={p.form.actualStock ?? 0}
-          min={0}
-          readOnly
-          disabled
-        />
-      </label>
-      <label className="block">
-        <span className="text-sm font-semibold text-slate-700">Tồn kho tối thiểu</span>
+        <span className="text-sm font-semibold text-slate-700">Tồn kho thực tế</span>
         <input
           type="number"
           className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-primary"
-          value={p.form.minStock || ''}
+          value={p.form.actualStock ?? 0}
           min={0}
-          onChange={(e) => p.handleChange('minStock', e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === '' || /^\d+$/.test(v)) p.handleChange('actualStock', Number(v));
+          }}
+          onKeyDown={(e) => {
+            if (
+              [
+                'Backspace',
+                'Delete',
+                'Tab',
+                'Escape',
+                'Enter',
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+              ].includes(e.key)
+            )
+              return;
+            if (!/^\d$/.test(e.key)) e.preventDefault();
+          }}
+        />
+      </label>
+      <label className="block">
+        <span className="text-sm font-semibold text-slate-700">Tồn kho khả dụng</span>
+        <input
+          type="number"
+          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-primary"
+          value={p.form.availableStock ?? 0}
+          min={0}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === '' || /^\d+$/.test(v)) p.handleChange('availableStock', Number(v));
+          }}
+          onKeyDown={(e) => {
+            if (
+              [
+                'Backspace',
+                'Delete',
+                'Tab',
+                'Escape',
+                'Enter',
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+              ].includes(e.key)
+            )
+              return;
+            if (!/^\d$/.test(e.key)) e.preventDefault();
+          }}
         />
       </label>
     </div>
