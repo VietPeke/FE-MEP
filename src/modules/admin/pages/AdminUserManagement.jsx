@@ -2,12 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../shared/components/Icon';
 import StaffModal from '../../owner/components/staff/StaffModal';
+
 import { getUserList, createOwner, createStaff, getRoleList, getPermissionList, getAdminBranches } from '../services/adminService';
 
 const AdminUserManagement = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  // eslint-disable-next-line no-unused-vars
+  const [branchFilter, setBranchFilter] = useState('');
+  // eslint-disable-next-line no-unused-vars
+  const [roleFilter, setRoleFilter] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,12 +78,22 @@ const AdminUserManagement = () => {
   };
 
   const renderUsersTable = () => {
-    const filtered = users.filter(
-      (u) =>
+    const filtered = users.filter((u) => {
+      const matchSearch =
         !searchTerm ||
         (u.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchBranch =
+        !branchFilter ||
+        u.defaultBranchId === branchFilter;
+
+      const matchRole =
+        !roleFilter ||
+        (u.roles || []).some((r) => r.roleId === roleFilter);
+
+      return matchSearch && matchBranch && matchRole;
+    });
 
     if (loading)
       return <div className="p-8 text-center text-xs text-slate-500 dark:text-[#999999]">Đang tải...</div>;
@@ -227,9 +242,9 @@ const AdminUserManagement = () => {
         </button>
       </div>
 
-      <div className="flex items-center justify-between rounded-md border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#0f0f0f] p-2 shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#0f0f0f] p-2 shadow-sm">
         {/* SEARCH BAR */}
-        <div className="relative w-80">
+        <div className="relative min-w-[200px] flex-1">
           <Icon
             name="search"
             size={14}
