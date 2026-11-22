@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import Icon from '../../../shared/components/Icon';
 import { Card } from '../../../shared/components/Card';
 import { useAuth } from '../../../shared/hooks/useAuth';
@@ -71,6 +72,7 @@ export const getStatusLabel = (item) => {
 
 const InventoryCheckList = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const canCreate = hasPermission(user, 'STOCK_CHECK_CREATE');
   const canApprove = hasPermission(user, 'STOCK_CHECK_APPROVE');
   const canCancel = hasPermission(user, 'STOCK_CHECK_CANCEL');
@@ -205,6 +207,15 @@ const InventoryCheckList = () => {
     setPageNumber(1);
   }, [searchCode, statusFilter, startDate, endDate]);
 
+  // Tự động mở phiếu kiểm kê khi có ticketId từ URL (từ thông báo)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ticketId = params.get('ticketId');
+    if (ticketId) {
+      setSelectedCheckId(ticketId);
+    }
+  }, [location.search]);
+
   // ==================== ACTION HANDLERS ====================
   const handleCreate = async (productIds, notes, assigneeUserId) => {
     setLoading(true);
@@ -326,13 +337,12 @@ const InventoryCheckList = () => {
         </div>
         <div className="flex items-center gap-3">
           <div
-            className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold shadow-sm ${
-              loading
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold shadow-sm ${loading
                 ? 'border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1a1a1a] text-slate-600 dark:text-[#b3b3b3]'
                 : globalError
                   ? 'border-red-200 bg-red-50 text-red-700 dark:text-red-400'
                   : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400'
-            }`}
+              }`}
           >
             {loading ? 'Đang tải dữ liệu...' : globalError ? '⚠ Đã xảy ra lỗi' : 'Sẵn sàng'}
           </div>

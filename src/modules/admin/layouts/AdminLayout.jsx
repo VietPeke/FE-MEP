@@ -124,7 +124,7 @@ const AdminLayout = () => {
           badge: null,
           icon: 'campaign',
         },
-        { label: 'Nhật ký máy chủ (Log)', path: '/admin/logs', badge: null, icon: 'terminal' },
+        { label: 'Nhật ký máy chủ', path: '/admin/logs', badge: null, icon: 'terminal' },
       ],
     },
   ];
