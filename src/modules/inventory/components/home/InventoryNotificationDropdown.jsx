@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Icon from '../../../../shared/components/Icon';
 import {
   getInventoryNotifications,
+  getSystemNotifications,
   markNotificationsAsRead,
 } from '../../services/inventoryCheckService';
 import { useNavigate } from 'react-router-dom';
@@ -17,11 +18,44 @@ const InventoryNotificationDropdown = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const res = await getInventoryNotifications({ pageNumber: 1, pageSize: 20 });
-      if (res?.success && res.data) {
-        setNotifications(res.data.items || []);
-        setUnreadCount(res.data.unreadCount || 0);
+      const [invRes, sysRes] = await Promise.all([
+        getInventoryNotifications({ pageNumber: 1, pageSize: 20 }).catch(() => null),
+        getSystemNotifications(7).catch(() => null)
+      ]);
+      
+      let invItems = [];
+      let sysItems = [];
+      let newUnreadCount = 0;
+
+      if (invRes?.success && invRes.data) {
+        invItems = invRes.data.items || [];
+        newUnreadCount += invRes.data.unreadCount || 0;
       }
+      
+      if (sysRes?.success && sysRes.data) {
+        sysItems = sysRes.data || [];
+        // Optional: Count system notifications as unread if they haven't been clicked.
+        // We can use localStorage to track read system notifications.
+        const readSys = JSON.parse(localStorage.getItem('read_system_notifs') || '[]');
+        const unreadSys = sysItems.filter(n => !readSys.includes(n.notificationId));
+        newUnreadCount += unreadSys.length;
+        
+        // Normalize system items to match inventory items structure
+        sysItems = sysItems.map(n => ({
+          notificationId: n.notificationId,
+          type: n.isUrgent ? 'SystemUrgent' : 'System',
+          typeDisplay: 'Hệ thống',
+          createdAt: n.sentAt,
+          message: n.content,
+          isRead: readSys.includes(n.notificationId),
+          title: n.title,
+          isSystem: true
+        }));
+      }
+
+      const combined = [...invItems, ...sysItems].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setNotifications(combined);
+      setUnreadCount(newUnreadCount);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -70,7 +104,23 @@ const InventoryNotificationDropdown = () => {
   };
 
   const handleNotificationClick = async (notif) => {
-    // Mark this specific notification as read if it's unread
+    // If it's a system notification, just mark as read locally
+    if (notif.isSystem) {
+      if (!notif.isRead) {
+        const readSys = JSON.parse(localStorage.getItem('read_system_notifs') || '[]');
+        readSys.push(notif.notificationId);
+        localStorage.setItem('read_system_notifs', JSON.stringify(readSys));
+        
+        setNotifications((prev) =>
+          prev.map((n) => (n.notificationId === notif.notificationId ? { ...n, isRead: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+      setIsOpen(false);
+      return;
+    }
+
+    // For inventory notifications
     if (!notif.isRead) {
       try {
         await markNotificationsAsRead([notif.notificationId], false);
@@ -84,30 +134,8 @@ const InventoryNotificationDropdown = () => {
     }
 
     setIsOpen(false);
-    // Điều hướng tới trang tương ứng dựa trên loại thông báo
-    const refType = notif.referenceType || (notif.inventoryCheckId ? 'InventoryCheck' : null);
-    const refId = notif.referenceId || notif.inventoryCheckId;
-
-    if (refType === 'InwardInventory' && refId) {
-      navigate(`/inventory/transactions?ticketId=${refId}&type=INWARD`);
-    } else if (refType === 'OutwardInventory' && refId) {
-      navigate(`/inventory/transactions?ticketId=${refId}&type=OUTWARD`);
-    } else if (refType === 'InventoryCheck' && refId) {
-      navigate(`/inventory/inventory-check?ticketId=${refId}`);
-    } else if (notif.inventoryCheckId) {
-      navigate(`/inventory/inventory-check?ticketId=${notif.inventoryCheckId}`);
-    } else {
-      // Fallback: parse message để đoán loại và mã phiếu
-      const msg = (notif.message || '').toLowerCase();
-      const ticketCodeMatch = (notif.message || '').match(/(PUR|CRN|OUT|BAL|RET|WRF|TRF)-[A-Za-z0-9]+/);
-      const ticketCode = ticketCodeMatch ? ticketCodeMatch[0] : '';
-      if (msg.includes('nhập kho')) {
-        navigate(`/inventory/transactions?type=INWARD${ticketCode ? `&search=${ticketCode}` : ''}`);
-      } else if (msg.includes('xuất kho')) {
-        navigate(`/inventory/transactions?type=OUTWARD${ticketCode ? `&search=${ticketCode}` : ''}`);
-      } else if (msg.includes('kiểm kê')) {
-        navigate('/inventory/inventory-check');
-      }
+    if (notif.inventoryCheckId) {
+      navigate('/inventory/inventory-check');
     }
   };
 
@@ -144,6 +172,10 @@ const InventoryNotificationDropdown = () => {
         return { name: 'check_circle', color: 'text-emerald-500', bg: 'bg-emerald-100' };
       case 'RecountRequested':
         return { name: 'replay', color: 'text-orange-500', bg: 'bg-orange-100' };
+      case 'SystemUrgent':
+        return { name: 'warning', color: 'text-red-500', bg: 'bg-red-100' };
+      case 'System':
+        return { name: 'campaign', color: 'text-indigo-500', bg: 'bg-indigo-100' };
       case 'Created':
         return { name: 'add_circle', color: 'text-purple-500', bg: 'bg-purple-100' };
       default:
@@ -171,6 +203,14 @@ const InventoryNotificationDropdown = () => {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3 dark:border-b-[#333333] dark:bg-[#1a1a1a]">
             <h3 className="text-sm font-bold text-slate-800 dark:text-[#e5e5e5]">Thông báo</h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                Đánh dấu đã đọc tất cả
+              </button>
+            )}
           </div>
 
           {/* List */}
@@ -201,8 +241,13 @@ const InventoryNotificationDropdown = () => {
                         <Icon name={iconInfo.name} size={20} className={iconInfo.color} />
                       </div>
                       <div className="min-w-0 flex-1">
+                        {notif.title && (
+                          <p className={`text-sm ${!notif.isRead ? 'font-bold text-slate-900 dark:text-[#e5e5e5]' : 'font-semibold text-slate-700 dark:text-[#b3b3b3]'}`}>
+                            {notif.title}
+                          </p>
+                        )}
                         <p
-                          className={`text-sm ${!notif.isRead ? 'font-bold text-slate-900 dark:text-[#e5e5e5]' : 'text-slate-700 dark:text-[#b3b3b3]'}`}
+                          className={`${notif.title ? 'text-xs mt-0.5' : 'text-sm'} ${!notif.isRead ? (notif.title ? 'text-slate-700 dark:text-[#e5e5e5]' : 'font-bold text-slate-900 dark:text-[#e5e5e5]') : 'text-slate-600 dark:text-[#b3b3b3]'}`}
                         >
                           {notif.message}
                         </p>
@@ -226,11 +271,10 @@ const InventoryNotificationDropdown = () => {
           {notifications.length > 0 && (
             <div className="border-t border-slate-100 bg-slate-50 p-2 text-center dark:border-t-[#333333] dark:bg-[#1a1a1a]">
               <button
-                onClick={handleMarkAllAsRead}
-                disabled={unreadCount === 0}
-                className={`text-xs font-bold ${unreadCount === 0 ? 'cursor-not-allowed text-slate-400 dark:text-[#666666]' : 'text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300'}`}
+                onClick={() => navigate('/inventory/inventory-check')}
+                className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-[#999999] dark:hover:text-[#e5e5e5]"
               >
-                Đánh dấu đọc tất cả
+                Tới trang quản lý Kiểm kê
               </button>
             </div>
           )}

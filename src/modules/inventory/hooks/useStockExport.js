@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getLocalDateString } from '../../../shared/utils/formatDate';
 import {
   createOutwardInventory,
   getOutwardInventories,
@@ -88,7 +87,7 @@ export const useStockExport = () => {
         products.find((p) => String(p.id || p.Id) === String(formData.productId))?.ProductName ||
         'Sản phẩm chưa đặt tên',
       quantity: Number(formData.quantity || 0),
-      date: formData.date || getLocalDateString(),
+      date: formData.date || new Date().toISOString().slice(0, 10),
       reason: formData.reason || '',
     };
 

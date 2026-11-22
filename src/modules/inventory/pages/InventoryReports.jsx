@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getLocalDateString } from '../../../shared/utils/formatDate';
 import { Card } from '../../../shared/components/Card';
 import { Button } from '../../../shared/components/Button';
 import { Input } from '../../../shared/components/Input';
@@ -100,15 +99,17 @@ const exportToCSV = (data, columns, fileName) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `${fileName}_${getLocalDateString()}.csv`);
+  link.setAttribute('download', `${fileName}_${new Date().toISOString().slice(0, 10)}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 };
 
 export const InventoryReports = () => {
-  const defaultToDate = getLocalDateString();
-  const defaultFromDate = getLocalDateString(new Date(new Date().setDate(new Date().getDate() - 30)));
+  const defaultToDate = new Date().toISOString().split('T')[0];
+  const defaultFromDate = new Date(new Date().setDate(new Date().getDate() - 30))
+    .toISOString()
+    .split('T')[0];
 
   // ============ STATES ============
   const [selectedReport, setSelectedReport] = useState('stock-movement');

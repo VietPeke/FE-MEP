@@ -72,7 +72,6 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
       const price = Number(item.costPrice || item.unitPrice || 0);
       return sum + qty * price;
     }, 0) || 0;
-  const isReturn = transaction?.ticketType === 'CUSTOMER_RETURN' || transaction?.ticketType === 'RETURN_SUPPLIER';
 
   const handlePrint = async () => {
     if (!transaction) return;
@@ -120,10 +119,8 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
         <td class="name">${item.productName || '-'}</td>
         <td class="c">${item.unit || item.unitName || '-'}</td>
         <td class="r">${Number(item.quantity || 0).toLocaleString('vi-VN')}</td>
-        ${!isReturn ? `
         <td class="r">${formatCurrency(item.costPrice || item.unitPrice || 0)}</td>
         <td class="r">${formatCurrency(Number(item.quantity || 0) * Number(item.costPrice || item.unitPrice || 0))}</td>
-        ` : ''}
       </tr>`
       )
       .join('');
@@ -198,8 +195,8 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
         <th width="35%">Tên sản phẩm</th>
         <th width="10%">ĐVT</th>
         <th width="10%">SL</th>
-        ${!isReturn ? `<th width="10%">Đơn giá</th>
-        <th width="15%">Thành tiền</th>` : ''}
+        <th width="10%">Đơn giá</th>
+        <th width="15%">Thành tiền</th>
       </tr>
     </thead>
     <tbody>
@@ -209,8 +206,8 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
       <tr>
         <td colspan="4" class="r bold">Tổng cộng:</td>
         <td class="r bold">${totalQuantity.toLocaleString('vi-VN')}</td>
-        ${!isReturn ? `<td></td>
-        <td class="r bold">${formatCurrency(totalAmount)}</td>` : ''}
+        <td></td>
+        <td class="r bold">${formatCurrency(totalAmount)}</td>
       </tr>
     </tfoot>
   </table>
@@ -342,11 +339,7 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
                   <div className="col-span-2">
                     <p className="text-xs text-slate-500 dark:text-[#999999]">Lý do / Ghi chú</p>
                     <p className="font-medium text-slate-900 dark:text-[#e5e5e5]">
-                      {(() => {
-                        const raw = transaction.reason || transaction.note || '';
-                        if (isReturn && (!raw || raw === 'Nhập kho')) return 'Khách hàng trả';
-                        return raw || '-';
-                      })()}
+                      {transaction.reason || transaction.note || '-'}
                     </p>
                   </div>
                 </div>
@@ -367,8 +360,8 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
                         <th className="px-4 py-3 font-medium">Tên sản phẩm</th>
                         <th className="px-4 py-3 text-right font-medium">ĐVT</th>
                         <th className="px-4 py-3 text-right font-medium">SL</th>
-                        {!isReturn && <th className="px-4 py-3 text-right font-medium">Đơn giá</th>}
-                        {!isReturn && <th className="px-4 py-3 text-right font-medium">Thành tiền</th>}
+                        <th className="px-4 py-3 text-right font-medium">Đơn giá</th>
+                        <th className="px-4 py-3 text-right font-medium">Thành tiền</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -404,19 +397,15 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
                           <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-[#e5e5e5]">
                             {Number(item.quantity || 0).toLocaleString('vi-VN')}
                           </td>
-                          {!isReturn && (
-                            <td className="px-4 py-3 text-right text-slate-600 dark:text-[#999999]">
-                              {formatCurrency(item.costPrice || item.unitPrice || 0)}
-                            </td>
-                          )}
-                          {!isReturn && (
-                            <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-[#e5e5e5]">
-                              {formatCurrency(
-                                Number(item.quantity || 0) *
-                                  Number(item.costPrice || item.unitPrice || 0)
-                              )}
-                            </td>
-                          )}
+                          <td className="px-4 py-3 text-right text-slate-600 dark:text-[#999999]">
+                            {formatCurrency(item.costPrice || item.unitPrice || 0)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-[#e5e5e5]">
+                            {formatCurrency(
+                              Number(item.quantity || 0) *
+                                Number(item.costPrice || item.unitPrice || 0)
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -440,14 +429,12 @@ export const TransactionDetailDrawer = ({ isOpen, onClose, transaction, loading 
                         </p>
                       </div>
                     </div>
-                    {!isReturn && (
                     <div className="text-right">
                       <p className="text-xs text-slate-500 dark:text-[#999999]">Tổng tiền</p>
                       <p className="text-2xl font-bold text-emerald-600">
                         {formatCurrency(totalAmount)}
                       </p>
                     </div>
-                    )}
                   </div>
                 </div>
               </div>

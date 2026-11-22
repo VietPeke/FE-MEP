@@ -12,7 +12,9 @@ import IdleTimeout from './shared/components/auth/IdleTimeout';
 
 // Static Pages
 import LandingPage from './pages/LandingPage';
-import ErrorToast from './shared/components/ErrorToast';
+import NotFound from './pages/errors/NotFound';
+import AccessDenied from './pages/errors/AccessDenied';
+import ServerError from './pages/errors/ServerError';
 
 // Auth Pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -67,7 +69,7 @@ const AdminRoleManagement = lazy(() => import('./modules/admin/pages/AdminRoleMa
 const StoreApprovals = lazy(() => import('./modules/admin/pages/StoreApprovals'));
 const SystemNotifications = lazy(() => import('./modules/admin/pages/SystemNotifications'));
 const SystemLog = lazy(() => import('./modules/admin/pages/SystemLog'));
-const AdminBranchManagement = lazy(() => import('./modules/admin/pages/AdminBranchManagement'));
+const AdminReports = lazy(() => import('./modules/admin/pages/AdminReports'));
 
 // Owner Module
 const OwnerAuditLog = lazy(() => import('./modules/owner/pages/OwnerAuditLog'));
@@ -186,17 +188,17 @@ function App() {
               <Route path="users" element={<AdminUserManagement />} />
               <Route path="users/:id" element={<AdminUserDetail />} />
               <Route path="roles" element={<AdminRoleManagement />} />
-              <Route path="branches" element={<AdminBranchManagement />} />
               <Route path="approvals" element={<StoreApprovals />} />
               <Route path="notifications" element={<SystemNotifications />} />
               <Route path="logs" element={<SystemLog />} />
+              <Route path="reports" element={<AdminReports />} />
             </Route>
           </Route>
 
-          {/* ROUTE ERROR - redirect kèm toast */}
-          <Route path="/403" element={<ErrorToast message="Bạn không có quyền truy cập trang này!" redirectTo="/" />} />
-          <Route path="/500" element={<ErrorToast message="Lỗi máy chủ! Vui lòng thử lại sau." redirectTo="/" />} />
-          <Route path="*" element={<ErrorToast message="Không tìm thấy trang yêu cầu!" redirectTo="/" />} />
+          {/* ROUTE ERROR */}
+          <Route path="/403" element={<AccessDenied />} />
+          <Route path="/500" element={<ServerError />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
       </ThemeProvider>

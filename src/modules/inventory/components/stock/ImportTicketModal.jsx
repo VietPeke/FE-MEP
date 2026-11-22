@@ -40,12 +40,7 @@ export const ImportTicketModal = ({ isOpen, onClose, onSuccess }) => {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [items, setItems] = useState([]);
   const [inwardType, setInwardType] = useState(1);
-  const isCustomerReturn = inwardType === 2;
   const [note, setNote] = useState('');
-
-  useEffect(() => {
-    if (isCustomerReturn && !note.trim()) setNote('Khách hàng trả');
-  }, [inwardType]); // eslint-disable-line react-hooks/exhaustive-deps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [status, setStatus] = useState({ type: 'info', message: 'Sẵn sàng tạo phiếu nhập kho' });
@@ -121,8 +116,7 @@ export const ImportTicketModal = ({ isOpen, onClose, onSuccess }) => {
         } else {
           key = row.productCode || `new-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
           importItem = {
-            id: key, _isNew: true,
-            productCode: row.productCode || '', productName: row.productName || '',
+            id: key, productCode: row.productCode || '', productName: row.productName || '',
             unitName: row.unitName || row.unit || '', unit: row.unitName || row.unit || '',
             quantity: Number(row.quantity || 0), costPrice: Number(row.costPrice || 0),
           };
@@ -164,23 +158,13 @@ export const ImportTicketModal = ({ isOpen, onClose, onSuccess }) => {
       reason: note || 'Nhập kho',
       note,
       items: items.map((i) => {
-        const isNewProduct = i._isNew === true;
-        const systemId = parseId(i.branchProductId || i.productId || i.id);
+        const systemId = parseId(i.branchProductId || i.productId);
         const item = { quantity: Number(i.quantity || 0), costPrice: Number(i.costPrice || 0), note: '' };
-
-        if (!isNewProduct && systemId) {
+        if (systemId) {
           item.id = systemId;
         } else {
-          item.id = null;
-          item.newProduct = {
-            productCode: i.productCode || '',
-            productName: i.productName || '',
-            unit: i.unitName || i.unit || '',
-            brandName: i.brandName || '',
-            categoryName: i.categoryName || '',
-            barcode: i.barcode || null,
-            salePrice: i.salePrice ?? 0,
-          };
+          item.productCode = i.productCode || i.id || '';
+          item.productName = i.productName || '';
         }
         return item;
       }),
@@ -303,7 +287,6 @@ export const ImportTicketModal = ({ isOpen, onClose, onSuccess }) => {
               onAddNewProduct={() => setIsProductModalOpen(true)}
               onImportRows={handleImportRows}
               formatCurrency={formatCurrency}
-              isCustomerReturn={isCustomerReturn}
             />
           </div>
           <div className="w-full shrink-0 xl:w-[300px]">
@@ -320,7 +303,6 @@ export const ImportTicketModal = ({ isOpen, onClose, onSuccess }) => {
               isSubmitting={isSubmitting}
               onSubmit={handleFinish}
               formatCurrency={formatCurrency}
-              isCustomerReturn={isCustomerReturn}
             />
           </div>
         </div>

@@ -3,7 +3,6 @@
  * Quản lý: header info, dòng hàng hóa, validations, isDirty, submit.
  */
 import { useState, useCallback, useMemo } from 'react';
-import { getLocalDateTimeString } from '../../../shared/utils/formatDate';
 import { useAuth } from '../../../shared/hooks/useAuth';
 import { createGoodsIssue } from '../services/goodsIssueService';
 import { buildIssuePayload, buildIssueLine } from '../utils/goodsIssueUtils';
@@ -23,7 +22,7 @@ export const useGoodsIssueForm = (initialData = null) => {
     customerName: initialData?.customer || '',
     description: initialData?.description || '',
     reference: initialData?.reference || '',
-    date: initialData?.date || getLocalDateTimeString(),
+    date: initialData?.date || new Date().toISOString().slice(0, 16),
     createdBy: initialData?.createdBy || user?.name || user?.email || 'Người dùng hiện tại',
   });
 
@@ -172,7 +171,7 @@ export const useGoodsIssueForm = (initialData = null) => {
       customerName: '',
       description: '',
       reference: '',
-      date: getLocalDateTimeString(),
+      date: new Date().toISOString().slice(0, 16),
       createdBy: user?.name || user?.email || 'Người dùng hiện tại',
     });
     setLines([buildIssueLine()]);

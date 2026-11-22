@@ -91,12 +91,7 @@ export const StockImport = () => {
   const [inwardType, setInwardType] = useState(
     () => Number(localStorage.getItem('stockImport_type')) || 1
   );
-  const isCustomerReturn = inwardType === 2;
   const [note, setNote] = useState('');
-
-  useEffect(() => {
-    if (isCustomerReturn && !note.trim()) setNote('Khách hàng trả');
-  }, [inwardType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: 'info', message: 'Sẵn sàng tạo phiếu nhập kho' });
@@ -466,7 +461,6 @@ export const StockImport = () => {
               onAddNewProduct={() => setIsProductModalOpen(true)}
               onImportRows={handleImportRows}
               formatCurrency={formatCurrency}
-              isCustomerReturn={isCustomerReturn}
             />
           </div>
 
@@ -484,7 +478,6 @@ export const StockImport = () => {
               isSubmitting={isSubmitting}
               onSubmit={handleFinish}
               formatCurrency={formatCurrency}
-              isCustomerReturn={isCustomerReturn}
             />
           </div>
         </div>

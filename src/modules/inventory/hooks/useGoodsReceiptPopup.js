@@ -3,7 +3,6 @@
  * 2 chế độ: Mua hàng (PURCHASE) / Khác (OTHER).
  */
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { getLocalDateTimeString } from '../../../shared/utils/formatDate';
 import { useAuth } from '../../../shared/hooks/useAuth';
 
 const genNumber = (() => {
@@ -38,7 +37,6 @@ export const useGoodsReceiptPopup = (onClose) => {
   // --- Header ---
   const [receiptType, setReceiptType] = useState('purchase');
   const isPurchase = receiptType === 'purchase';
-  const isCustomerReturn = receiptType === 'customer_return';
 
   const [header, setHeader] = useState({
     supplierId: '',
@@ -47,7 +45,7 @@ export const useGoodsReceiptPopup = (onClose) => {
     partnerName: '',
     description: '',
     receiptNumber: genNumber(),
-    date: getLocalDateTimeString(),
+    date: new Date().toISOString().slice(0, 16),
     createdBy: user?.name || '',
     paymentStatus: 'unpaid',
     paymentMethod: 'Tiền mặt',
@@ -365,11 +363,11 @@ export const useGoodsReceiptPopup = (onClose) => {
   const isValid = useMemo(() => {
     if (isPurchase) {
       if (!header.supplierId && !header.supplierName) return false;
-    } else if (!isCustomerReturn) {
+    } else {
       if (!header.partnerId && !header.partnerName) return false;
     }
     return dirtyLines.some((l) => l.productId && l.quantity > 0);
-  }, [isPurchase, isCustomerReturn, header, dirtyLines]);
+  }, [isPurchase, header, dirtyLines]);
 
   // --- Close ---
   const requestClose = useCallback(() => {
@@ -386,7 +384,7 @@ export const useGoodsReceiptPopup = (onClose) => {
     setSaving(true);
     try {
       const payload = {
-        receiptType: isPurchase ? 'PURCHASE' : isCustomerReturn ? 'CUSTOMER_RETURN' : 'OTHER',
+        receiptType: isPurchase ? 'PURCHASE' : 'OTHER',
         ...(isPurchase
           ? {
               supplierId: header.supplierId,
@@ -397,9 +395,7 @@ export const useGoodsReceiptPopup = (onClose) => {
               invoiceNumber: header.invoiceNumber,
               invoiceDate: header.invoiceDate,
             }
-          : isCustomerReturn
-            ? {}
-            : { partnerId: header.partnerId, partnerName: header.partnerName }),
+          : { partnerId: header.partnerId, partnerName: header.partnerName }),
         description: header.description,
         receiptNumber: header.receiptNumber,
         date: header.date,
@@ -436,7 +432,6 @@ export const useGoodsReceiptPopup = (onClose) => {
     receiptType,
     setReceiptType,
     isPurchase,
-    isCustomerReturn,
     header,
     handleHeader,
     lines,

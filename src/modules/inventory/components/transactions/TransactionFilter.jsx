@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
-import { getLocalDateString } from '../../../../shared/utils/formatDate';
 
 const filterOptions = {
   searchBy: [
@@ -72,7 +71,7 @@ const SelectDropdown = ({ options, value, onChange, placeholder }) => {
 };
 
 export const TransactionFilter = ({ onFilterChange, filters: initialFilters }) => {
-  const todayString = getLocalDateString();
+  const todayString = new Date().toISOString().split('T')[0];
 
   const [filters, setFilters] = useState({
     searchTerm: initialFilters?.searchTerm || '',

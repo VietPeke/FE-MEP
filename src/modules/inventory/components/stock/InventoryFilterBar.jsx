@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Filter, RotateCcw, Layers } from 'lucide-react';
-import { getLocalDateString } from '../../../../shared/utils/formatDate';
 import { Button } from '../../../../shared/components/Button';
 import Drawer from '../../../../shared/components/Drawer';
 
@@ -39,7 +38,7 @@ export const InventoryFilterBar = ({
         ];
 
   // Đếm số lượng bộ lọc đang áp dụng (ẩn trong Drawer) để hiển thị Badge
-  const todayString = getLocalDateString();
+  const todayString = new Date().toISOString().split('T')[0];
   let activeFilterCount = 0;
   if (filters.ticketType) activeFilterCount++;
   if (filters.fromDate) activeFilterCount++;

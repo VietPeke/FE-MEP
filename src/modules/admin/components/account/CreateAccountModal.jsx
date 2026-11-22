@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../../shared/components/Icon';
 
-const CreateAccountModal = ({ isOpen, onClose, onSave, roles, branches }) => {
+const CreateAccountModal = ({ isOpen, onClose, onSave, roles }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -19,10 +19,7 @@ const CreateAccountModal = ({ isOpen, onClose, onSave, roles, branches }) => {
         email: '',
         password: '',
         phoneNumber: '',
-        roleIds: [],
-        branchId: '',
-        roleName: '',
-        branchName: '',
+        roleName: '', // 'Owner', 'Sales Staff', 'Inventory Staff', 'Staff'
       });
       setErrors({});
     }
@@ -42,7 +39,6 @@ const CreateAccountModal = ({ isOpen, onClose, onSave, roles, branches }) => {
     setFormData((prev) => ({
       ...prev,
       roleName,
-      branchName: '', // Reset when changing role
     }));
     if (errors.roleName) {
       setErrors({ ...errors, roleName: null });
@@ -67,16 +63,6 @@ const CreateAccountModal = ({ isOpen, onClose, onSave, roles, branches }) => {
     }
     if (!formData.roleName) newErrors.roleName = 'Vui lòng chọn loại tài khoản.';
     
-    // Nếu là Owner và không chọn BranchId có sẵn, thì bắt buộc nhập tên cửa hàng
-    if (formData.roleName === 'Owner' && !formData.branchId && !formData.branchName?.trim()) {
-      newErrors.branchName = 'Vui lòng nhập tên cửa hàng mới cho Chủ cửa hàng này, hoặc chọn một Cửa hàng có sẵn bên dưới.';
-    }
-
-    // Nếu không phải Owner, bắt buộc phải chọn BranchId
-    if (formData.roleName && formData.roleName !== 'Owner' && formData.roleName !== 'Admin' && !formData.branchId) {
-      newErrors.branchId = 'Vui lòng chọn Cửa hàng cho tài khoản này.';
-    }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -85,21 +71,13 @@ const CreateAccountModal = ({ isOpen, onClose, onSave, roles, branches }) => {
     e.preventDefault();
     if (!validateForm()) return;
     
-    // Set username = email
-    let mappedRoleName = formData.roleName;
-    if (mappedRoleName === 'Sales Staff') mappedRoleName = 'SalesStaff';
-    if (mappedRoleName === 'Inventory Staff') mappedRoleName = 'InventoryStaff';
-
-    const dataToSave = { ...formData, username: formData.email, roleName: mappedRoleName };
+    const dataToSave = { ...formData, username: formData.email };
     onSave(dataToSave);
   };
 
-  // Bỏ chặn Staff, chỉ chặn Admin và CommunityUser
-  const assignableRoles = roles.filter(
-    (r) => 
-      r.roleName.toLowerCase() !== 'admin' && 
-      r.roleName.toLowerCase() !== 'communityuser'
-  );
+  // Chỉ hiển thị 3 loại tài khoản theo yêu cầu
+  const allowedRoles = ['Owner', 'InventoryStaff', 'SalesStaff'];
+  const assignableRoles = roles.filter((r) => allowedRoles.includes(r.roleName));
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -174,43 +152,6 @@ const CreateAccountModal = ({ isOpen, onClose, onSave, roles, branches }) => {
             </div>
           </div>
 
-          {formData.roleName === 'Owner' && !formData.branchId && (
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-[#999999]">
-                Tên Cửa Hàng Mới (Nếu tạo Cửa hàng mới) <span className="text-red-600 dark:text-red-500">*</span>
-              </label>
-              <input
-                name="branchName"
-                value={formData.branchName || ''}
-                onChange={handleChange}
-                type="text"
-                className={`w-full rounded border p-2 text-xs outline-none bg-transparent text-slate-900 dark:text-[#e5e5e5] ${errors.branchName ? 'border-red-500 focus:border-red-500' : 'border-slate-200 dark:border-[#333333] focus:border-[#004785]'}`}
-                placeholder="VD: Cửa hàng Kim khí ABC"
-              />
-              {errors.branchName && <p className="mt-1 text-[10px] text-red-500">{errors.branchName}</p>}
-            </div>
-          )}
-
-          {formData.roleName && formData.roleName !== 'Admin' && (
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-[#999999]">
-                Chọn Cửa Hàng (Nếu đã có) {formData.roleName !== 'Owner' && <span className="text-red-600 dark:text-red-500">*</span>}
-              </label>
-              <select
-                name="branchId"
-                value={formData.branchId || ''}
-                onChange={handleChange}
-                className={`w-full rounded border p-2 text-xs outline-none bg-transparent text-slate-900 dark:text-[#e5e5e5] [&>option]:bg-white dark:[&>option]:bg-[#0f0f0f] ${errors.branchId ? 'border-red-500 focus:border-red-500' : 'border-slate-200 dark:border-[#333333] focus:border-[#004785]'}`}
-              >
-                <option value="">-- Tạo cửa hàng mới (Chỉ áp dụng cho Chủ Cửa Hàng) --</option>
-                {(branches || []).map(b => (
-                  <option key={b.branchId} value={b.branchId}>{b.branchName}</option>
-                ))}
-              </select>
-              {errors.branchId && <p className="mt-1 text-[10px] text-red-500">{errors.branchId}</p>}
-            </div>
-          )}
-
           <div>
             <label className="mb-2 block text-xs font-semibold text-slate-500 dark:text-[#999999]">
               Chọn Loại Tài Khoản <span className="text-red-600 dark:text-red-500">*</span>
@@ -234,21 +175,14 @@ const CreateAccountModal = ({ isOpen, onClose, onSave, roles, branches }) => {
                     className="h-4 w-4 text-[#004785] focus:ring-[#004785]"
                   />
                   <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-[#e5e5e5]">{role.roleName}</div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-[#e5e5e5]">
+                      {role.roleName === 'InventoryStaff' ? 'Inventory Staff' : role.roleName === 'SalesStaff' ? 'Sales Staff' : role.roleName}
+                    </div>
                   </div>
                 </label>
               ))}
             </div>
             {errors.roleName && <p className="mt-1 text-[10px] text-red-500">{errors.roleName}</p>}
-
-            {formData.roleName === 'Owner' && !formData.branchId && (
-              <div className="mt-3 rounded-md bg-blue-50 dark:bg-blue-900/20 p-3 border border-blue-100 dark:border-blue-800/30 flex items-start gap-2">
-                <Icon name="info" size={16} className="text-[#004785] dark:text-blue-400 mt-0.5" />
-                <p className="text-[11px] font-semibold text-[#004785] dark:text-blue-300">
-                  Hệ thống sẽ tự động khởi tạo Cửa Hàng <strong>{formData.branchName || 'mới'}</strong> và gán Chủ cửa hàng này làm người quản lý mặc định.
-                </p>
-              </div>
-            )}
           </div>
 
           <div className="mt-4 flex justify-end gap-3 border-t border-slate-200 dark:border-[#333333] pt-4">

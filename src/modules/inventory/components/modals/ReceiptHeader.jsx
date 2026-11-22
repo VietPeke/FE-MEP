@@ -13,7 +13,6 @@ const ReceiptHeader = ({ receiptType, onTypeChange, onClose }) => (
         onChange={(e) => onTypeChange(e.target.value)}
       >
         <option value="purchase">Mua hàng</option>
-        <option value="customer_return">Khách hàng trả lại</option>
         <option value="other">Khác</option>
       </select>
     </div>
