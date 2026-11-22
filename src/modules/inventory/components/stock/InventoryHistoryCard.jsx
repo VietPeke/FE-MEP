@@ -184,18 +184,11 @@ export const InventoryHistoryCard = ({
         });
       if (onReload) onReload();
     } catch (error) {
-      let msg;
-      if (error?.status === 409 || error?.status === 400) {
-        msg = 'Phiếu này đã được duyệt trước đó! Tồn kho đã được hạch toán.';
-        window.alert(msg);
-      } else {
-        const errList = error?.data?.errors;
-        msg = Array.isArray(errList)
-          ? errList.join(' | ')
-          : error?.message || 'Lỗi khi xác nhận phiếu';
-        onNotify && onNotify({ type: 'error', message: msg });
-      }
-      if (onReload) onReload();
+      const errList = error?.data?.errors;
+      const msg = Array.isArray(errList)
+        ? errList.join(' | ')
+        : error?.message || 'Lỗi khi xác nhận phiếu';
+      onNotify && onNotify({ type: 'error', message: msg });
     } finally {
       setConfirmingId(null);
     }
@@ -222,16 +215,11 @@ export const InventoryHistoryCard = ({
       setCancellingTicket(null);
       if (onReload) onReload();
     } catch (error) {
-      let msg = error?.message || 'Lỗi khi hủy phiếu';
-      msg = msg.replace(/[.;,]?\s*Sản phẩm bị ảnh hưởng.*$/i, '');
-      msg = msg.replace(/\s*:\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '');
-      const status = error?.status || 0;
-      if (status >= 400 && status < 500) {
-        window.alert(msg);
-      } else {
-        onNotify && onNotify({ type: 'error', message: msg });
-      }
-      if (onReload) onReload();
+      const errList = error?.data?.errors;
+      const msg = Array.isArray(errList)
+        ? errList.join(', ')
+        : error?.message || 'Lỗi khi hủy phiếu';
+      onNotify && onNotify({ type: 'error', message: msg });
     } finally {
       setIsSubmittingCancel(false);
     }
