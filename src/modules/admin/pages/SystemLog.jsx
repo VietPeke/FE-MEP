@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Icon from '../../../shared/components/Icon';
 import { getLogList, getLogDetail, exportLogs } from '../services/adminService';
 import LogFilterBar from '../components/log/LogFilterBar';
-import LogTable, { translateAction } from '../components/log/LogTable';
+import LogTable from '../components/log/LogTable';
 import LogDetailModal from '../components/log/LogDetailModal';
 
 const SystemLog = () => {
@@ -12,10 +12,8 @@ const SystemLog = () => {
   const [selectedLog, setSelectedLog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const fetchLogs = useCallback(() => {
     setLoading(true);
@@ -39,16 +37,11 @@ const SystemLog = () => {
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
-      const searchLower = searchTerm.toLowerCase();
-      
-      const cleanDescription = (log.description || '').replace(/( - Branch: | tại chi nhánh )[a-f0-9-]{36}/gi, '');
-      const translatedAction = translateAction(log.action);
-
+      // 1. Filter by Search Term
       const matchesSearch =
-        cleanDescription.toLowerCase().includes(searchLower) ||
-        (log.userName || '').toLowerCase().includes(searchLower) ||
-        translatedAction.toLowerCase().includes(searchLower) ||
-        (log.source || '').toLowerCase().includes(searchLower);
+        (log.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (log.source || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (log.action || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       // 2. Filter by Level (Client-side fallback)
       const logLvl = log.level ? log.level.toUpperCase() : 'INFO'; // Default empty level to INFO
@@ -58,13 +51,8 @@ const SystemLog = () => {
     });
   }, [logs, searchTerm, filterLevel]);
 
-  // Reset to page 1 when search or filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterLevel]);
-
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
-  const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
+  const pagedLogs = filteredLogs.slice((page - 1) * pageSize, page * pageSize);
 
   const handleExportData = async (format) => {
     try {
@@ -92,87 +80,87 @@ const SystemLog = () => {
   };
 
   return (
-    <div className="space-y-6 text-slate-900 dark:text-[#e5e5e5]">
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#333333] pb-3">
+    <div className="w-full space-y-6 text-slate-900 dark:text-[#e5e5e5]">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-[#e5e5e5]">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-[#e5e5e5]">
             Nhật Ký Hệ Thống
           </h1>
-          <p className="mt-1 text-sm font-semibold uppercase tracking-tight text-slate-500 dark:text-[#999999]">
-            Theo dõi sự kiện hoạt động, cảnh báo bảo mật
+          <p className="mt-1 text-gray-600 dark:text-[#999999]">
+            Theo dõi sự kiện hoạt động, cảnh báo bảo mật.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleExportData('excel')}
-            className="flex items-center gap-2 rounded-md border border-[#004785] bg-[#004785] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-800"
-          >
-            <Icon name="download" size={16} /> XUẤT EXCEL
-          </button>
-        </div>
+        <button
+          onClick={() => handleExportData('excel')}
+          className="flex items-center gap-2 rounded-xl bg-[#004785] px-4 py-2 text-base font-medium text-white transition-all duration-150 hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          <Icon name="download" size={18} /> Xuất Excel
+        </button>
       </div>
 
       <LogFilterBar
         searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
+        onSearchChange={(v) => { setSearchTerm(v); setPage(1); }}
         filterLevel={filterLevel}
-        onFilterChange={setFilterLevel}
+        onFilterChange={(v) => { setFilterLevel(v); setPage(1); }}
       />
 
       {loading && (
-        <div className="rounded-md bg-white dark:bg-[#0f0f0f] p-8 text-center text-xs text-slate-500 dark:text-[#999999]">
-          Đang tải...
+        <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-12 dark:border-[#333333] dark:bg-[#1a1a1a]">
+          <Icon name="sync" className="mr-2 animate-spin text-xl text-slate-400 dark:text-[#808080]" />
+          <span className="text-sm font-semibold text-slate-400 dark:text-[#808080]">Đang tải...</span>
         </div>
       )}
       {error && (
-        <div className="rounded-md bg-red-50 dark:bg-red-900/30 p-3 text-xs font-semibold text-red-600 dark:text-red-500">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm font-bold text-red-600 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-500">
           {error}
         </div>
       )}
       {!loading && !error && (
-        <div className="flex flex-col space-y-4">
-          <LogTable logs={paginatedLogs} onRowClick={handleRowClick} />
-          {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-200 dark:border-[#333333] bg-white dark:bg-[#0f0f0f] px-4 py-3">
-          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-[#999999]">
-            <div className="flex items-center gap-2">
-              <span>Hiển thị</span>
-              <select 
-                value={itemsPerPage}
-                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                className="rounded border border-slate-200 dark:border-[#333333] bg-transparent py-1 px-2 text-xs text-slate-900 dark:text-[#e5e5e5] outline-none focus:border-[#004785]"
-              >
-                <option value={10}>10 dòng</option>
-                <option value={20}>20 dòng</option>
-                <option value={50}>50 dòng</option>
-                <option value={100}>100 dòng</option>
-              </select>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#333333] dark:bg-[#1a1a1a]">
+          <div className="overflow-x-auto p-4">
+            <LogTable logs={pagedLogs} onRowClick={handleRowClick} />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 dark:border-[#333333]">
+            <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-[#b3b3b3]">
+              <div className="flex items-center gap-2">
+                <span>Hiển thị</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  className="rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-[#004785] dark:border-[#404040] dark:bg-[#1a1a1a] dark:text-[#d4d4d4]"
+                >
+                  <option value={20}>20 dòng</option>
+                  <option value={50}>50 dòng</option>
+                  <option value={100}>100 dòng</option>
+                </select>
+              </div>
+              <span>
+                {filteredLogs.length === 0 ? 0 : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, filteredLogs.length)} trong tổng số {filteredLogs.length} bản ghi
+              </span>
             </div>
-            <span>
-              {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredLogs.length)} trong tổng số {filteredLogs.length} dòng
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="rounded-lg border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-[#404040] dark:text-[#b3b3b3] dark:hover:bg-[#333333]"
+              >
+                <Icon name="chevron_left" className="text-[18px]" />
+              </button>
+              <div className="px-3 text-sm text-slate-700 dark:text-[#b3b3b3]">
+                Trang {page} / {totalPages}
+              </div>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="rounded-lg border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-[#404040] dark:text-[#b3b3b3] dark:hover:bg-[#333333]"
+              >
+                <Icon name="chevron_right" className="text-[18px]" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#1a1a1a] text-slate-500 hover:bg-slate-50 disabled:opacity-50 dark:hover:bg-[#272727]"
-            >
-              <Icon name="chevron_left" size={16} />
-            </button>
-            <span className="font-medium text-slate-600 dark:text-[#999999]">
-              Trang {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#1a1a1a] text-slate-500 hover:bg-slate-50 disabled:opacity-50 dark:hover:bg-[#272727]"
-            >
-              <Icon name="chevron_right" size={16} />
-            </button>
-          </div>
-        </div>
-          )}
         </div>
       )}
 
