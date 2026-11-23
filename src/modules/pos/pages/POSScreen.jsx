@@ -30,7 +30,6 @@ import {
   confirmTransfer,
   cancelPayment,
 } from '../services/posService';
-import { apiPosGet } from '../../../services/apiClient';
 
 const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản' };
 const newPaymentLine = (method = 'cash') => ({ id: Date.now(), method, amount: 0 });
@@ -123,8 +122,14 @@ const POSScreen = () => {
   useEffect(() => {
     const fetchDiscountTiers = async () => {
       try {
-        const res = await apiPosGet('/order-discount-tiers');
-        setDiscountTiers(res || []);
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:5100/api/order-discount-tiers', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDiscountTiers(data || []);
+        }
       } catch (e) {
         console.error('Failed to fetch discount tiers:', e);
       }
