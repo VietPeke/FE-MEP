@@ -7,13 +7,18 @@ import { ReportHelpModal } from './ReportHelpModal';
 
 const calcQty = (items, field) => items.reduce((s, i) => s + (Number(i[field]) || 0), 0);
 
-export const StockMovementReport = ({ data, isLoading, fromDate, toDate }) => {
+export const StockMovementReport = ({ data, isLoading, fromDate, toDate, productStatus = 'all' }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [ledgerProduct, setLedgerProduct] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
 
-  const items = useMemo(() => data?.items || [], [data?.items]);
+  const items = useMemo(() => {
+    const all = data?.items || [];
+    if (productStatus === 'active') return all.filter(i => !i.isDeleted);
+    if (productStatus === 'deleted') return all.filter(i => i.isDeleted);
+    return all;
+  }, [data?.items, productStatus]);
   const totalPages = Math.ceil(items.length / pageSize) || 1;
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -89,6 +94,7 @@ export const StockMovementReport = ({ data, isLoading, fromDate, toDate }) => {
                         {item.categoryName && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 dark:bg-[#272727] dark:text-[#999]">{item.categoryName}</span>}
                         {neg && <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/30 dark:text-red-400">Âm kho</span>}
                         {noPrice && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-950/30 dark:text-amber-400">Chưa có giá vốn</span>}
+                        {item.isDeleted && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-[#333] dark:text-[#999]">Đã xóa</span>}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-right"><div className="font-semibold">{item.openingStock ?? 0}</div><div className="text-xs text-slate-400">{formatCurrency(item.openingValue)}</div></td>
