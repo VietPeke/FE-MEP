@@ -3,7 +3,7 @@ import {
   createInwardInventory,
   confirmInwardInventory,
   getInwardInventories,
-  getProducts,
+  getProductsLookup,
 } from '../services/inventoryService';
 import { getSuppliers } from '../services/supplierService';
 
@@ -34,6 +34,7 @@ const fallbackProducts = [
   },
 ];
 
+// eslint-disable-next-line 
 const fallbackSuppliers = [
   { id: 'sup-001', name: 'Công ty Hòa Phát', phone: '0901234567' },
   { id: 'sup-002', name: 'Công ty Nam Kim', phone: '0912345678' },
@@ -75,7 +76,7 @@ const normalizeInwardRow = (item, index) => {
 
 export const StockImport = () => {
   const [products, setProducts] = useState(fallbackProducts);
-  const [suppliers, setSuppliers] = useState(fallbackSuppliers);
+  const [suppliers, setSuppliers] = useState([]);
 
   const [selectedSupplier, setSelectedSupplier] = useState(null);
 
@@ -132,24 +133,26 @@ export const StockImport = () => {
 
   useEffect(() => {
     const loadInitData = async () => {
+      // Load suppliers - API mo, khong yeu cau quyen cu the
       try {
-        const [prodRes, supRes] = await Promise.all([
-          getProducts({ pageNumber: 1, pageSize: 50 }),
-          getSuppliers({ pageNumber: 1, pageSize: 50 }),
-        ]);
-        const pList = extractList(prodRes);
+        const supRes = await getSuppliers({ pageNumber: 1, pageSize: 50 });
         const sList = extractList(supRes);
-        if (pList.length > 0) setProducts(pList);
-        if (sList.length > 0) {
-          setSuppliers(sList);
-        }
-        setStatus({ type: 'success', message: 'Đã tải dữ liệu hệ thống' });
+        if (sList.length > 0) setSuppliers(sList);
       } catch {
-        setGlobalError('Không thể tải dữ liệu sản phẩm hoặc nhà cung cấp.');
-      } finally {
-        setIsLoadingData(false);
-        loadInwardHistory();
+        // keep empty
       }
+
+      // Load products - dung API lookup (khong can quyen PRODUCT_VIEW)
+      try {
+        const prodRes = await getProductsLookup({ pageSize: 200 });
+        setProducts(extractList(prodRes));
+      } catch {
+        setProducts([]);
+      }
+
+      setStatus({ type: 'success', message: 'Đã tải dữ liệu hệ thống' });
+      setIsLoadingData(false);
+      loadInwardHistory();
     };
     loadInitData();
   }, [loadInwardHistory]);
@@ -453,7 +456,7 @@ export const StockImport = () => {
         isOpen={isModalOpen}
         onClose={() => !isSubmitting && setIsModalOpen(false)}
         title="Tạo phiếu nhập kho"
-        size="7xl"
+        size="8xl"
       >
         <div className="flex flex-col gap-6 xl:flex-row">
           <div className="min-w-0 flex-1">
@@ -470,7 +473,7 @@ export const StockImport = () => {
             />
           </div>
 
-          <div className="w-full shrink-0 xl:w-[300px]">
+          <div className="w-full shrink-0 xl:w-[400px]">
             <ImportTicketForm
               inwardType={inwardType}
               onChangeInwardType={setInwardType}

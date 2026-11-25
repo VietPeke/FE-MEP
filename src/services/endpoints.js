@@ -12,6 +12,8 @@ export const ENDPOINTS = {
     LOW_STOCK: '/api/reports/low-stock',
     PRODUCT_PROFIT: '/api/reports/product-profit',
     SUPPLIER_DETAIL: '/api/reports/supplier-detail',
+    STOCK_LEDGER: (branchProductId) => `/api/reports/stock-ledger/${branchProductId}`,
+    SNAPSHOT_DAILY: '/api/reports/snapshot-daily',
   },
 
   // ============ OWNER (Quản lý) ============
@@ -28,6 +30,7 @@ export const ENDPOINTS = {
     STAFF_UNASSIGN_BRANCH: (id, branchId) => `/api/owner/staffs/${id}/unassign-branch/${branchId}`,
     STAFF_TOGGLE_STATUS: (id) => `/api/owner/staffs/${id}/toggle-status`,
     STAFF_AVAILABLE_PERMISSIONS: '/api/owner/staffs/available-permissions',
+    STAFF_ROLE_PERMISSIONS: '/api/owner/staffs/role-permissions',
     STAFF_CHECK_RELATIONS: (id) => `/api/owner/staffs/${id}/check-relations`,
 
     // Discount Tiers (Chiết khấu theo giá trị đơn hàng)
@@ -49,6 +52,8 @@ export const ENDPOINTS = {
 
     // ================= Products =================
     GET_PRODUCTS: '/api/Products',
+    GET_PRODUCTS_LOOKUP: '/api/Products/lookup',
+    SEARCH_PRODUCTS: '/api/Products/search',
     CREATE_PRODUCT: '/api/Products',
     GET_PRODUCT: (id) => `/api/Products/${id}`,
     UPDATE_PRODUCT: (id) => `/api/Products/${id}`,
@@ -93,6 +98,8 @@ export const ENDPOINTS = {
     GET_INWARD_INVENTORY: (id) => `/api/InwardInventory/${id}`,
     UPDATE_INWARD_INVENTORY: (id) => `/api/InwardInventory/${id}`,
     DELETE_INWARD_INVENTORY: (id) => `/api/InwardInventory/${id}`,
+    GET_INWARD_BY_SUPPLIER: (supplierId) => `/api/InwardInventory/by-supplier/${supplierId}`,
+    GET_INWARD_RETURNABLE_ITEMS: (id) => `/api/InwardInventory/${id}/returnable-items`,
 
     // ================= Outward Inventory =================
     GET_OUTWARD_INVENTORIES: '/api/OutwardInventory',
@@ -114,6 +121,7 @@ export const ENDPOINTS = {
 
     // ================= KIỂM KÊ KHO =================
     REJECT_INVENTORY_CHECK: (id) => `/api/InventoryCheck/${id}/reject`,
+    GET_COUNTERS: '/api/InventoryCheck/counters',
     GET_NOTIFICATIONS: '/api/InventoryCheck/notifications',
     MARK_NOTIFICATION_READ: '/api/InventoryCheck/notifications/read',
 
@@ -141,6 +149,7 @@ export const ENDPOINTS = {
     GET_LIST: '/api/expense',
     GET_DETAIL: (id) => `/api/expense/${id}`,
     CREATE: '/api/expense',
+    UPDATE: (id) => `/api/expense/${id}`,
     CONFIRM: (id) => `/api/expense/${id}/confirm`,
     CANCEL: (id) => `/api/expense/${id}/cancel`,
 
@@ -187,6 +196,7 @@ export const ENDPOINTS = {
     GET_CUSTOMER: (customerId) => `/pos/customers/${customerId}`,
     CREATE_CUSTOMER: '/pos/customers',
     UPDATE_CUSTOMER: (customerId) => `/pos/customers/${customerId}`,
+    DELETE_CUSTOMER: (customerId) => `/pos/customers/${customerId}`,
     GET_CUSTOMER_ORDERS: (customerId) => `/pos/customers/${customerId}/orders`,
 
     // --- Returns (Đổi trả) ---
@@ -205,7 +215,6 @@ export const ENDPOINTS = {
   // ============ ADMIN (Quản trị hệ thống) ============
   ADMIN: {
     // Dashboard
-    DASHBOARD_STATS: '/api/admin/dashboard/stats',
     DASHBOARD_REVENUE: '/api/admin/dashboard/revenue-chart',
     DASHBOARD_EVENTS: '/api/admin/dashboard/recent-events',
     DASHBOARD_EXPORT: '/api/admin/dashboard/export',

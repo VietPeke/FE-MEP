@@ -21,6 +21,7 @@ const emptyForm = {
 
 const isValidPhone = (phone) => /^(0[3|5|7|8|9])[0-9]{8}$/.test(phone);
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+// eslint-disable-next-line 
 const isValidTaxCode = (code) => /^[0-9]{10,14}$/.test(code);
 
 const validateForm = (data) => {
@@ -35,10 +36,6 @@ const validateForm = (data) => {
     errors.contactEmail = 'Email là bắt buộc';
   else if (!isValidEmail(data.contactEmail))
     errors.contactEmail = 'Email không đúng định dạng';
-  if (!data.taxCode.trim())
-    errors.taxCode = 'Mã số thuế là bắt buộc';
-  else if (!isValidTaxCode(data.taxCode))
-    errors.taxCode = 'Mã số thuế phải từ 10-14 chữ số';
   if (!data.bankAccount.trim())
     errors.bankAccount = 'Số tài khoản là bắt buộc';
   else if (!/^[0-9]+$/.test(data.bankAccount))
@@ -50,7 +47,7 @@ const validateForm = (data) => {
   return errors;
 };
 
-const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave, onDelete }) => {
+const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave, onDelete, canEdit = true, canDelete = true }) => {
   const [formData, setFormData] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -121,8 +118,10 @@ const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave, onDel
         {supplier && (
           <Button
             variant="danger"
+            disabled={!canDelete}
             onClick={() => { onDelete?.(supplier); onClose(); }}
             className="flex items-center gap-1"
+            title={!canDelete ? 'Bạn không có quyền xóa nhà cung cấp' : ''}
           >
             <Icon name="delete" size={18} />
             Xóa
@@ -138,8 +137,9 @@ const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave, onDel
             type="submit"
             form="supplierForm"
             variant="primary"
-            disabled={submitting}
+            disabled={submitting || (mode === 'edit' && !canEdit)}
             className="flex items-center gap-2"
+            title={mode === 'edit' && !canEdit ? 'Bạn không có quyền sửa nhà cung cấp' : ''}
           >
             {submitting ? (
               'Đang lưu...'
@@ -218,7 +218,6 @@ const SupplierModal = ({ isOpen, mode, supplier, loading, onClose, onSave, onDel
             />
             <Input
               label="Mã số thuế"
-              required
               name="taxCode"
               value={formData.taxCode}
               onChange={handleChange}

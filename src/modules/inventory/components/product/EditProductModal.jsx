@@ -684,16 +684,7 @@ const EditProductModalContent = ({ onClose, product, onSave, title, productList,
   const f = useEditProductForm({ product, onSave, onClose, productList, initialTab });
 
   const footerContent = (
-    <div className="flex w-full items-center justify-between">
-      <div className="flex items-center space-x-3">
-        <Toggle checked={f.form.productStatus !== 'inactive'} disabled />
-        <label className="flex items-center text-sm font-semibold text-slate-500 dark:text-[#999999]">
-          Đang hoạt động{' '}
-          <span className="ml-2 hidden text-xs font-normal text-slate-400 dark:text-[#808080] sm:inline">
-            — đổi trạng thái ở danh sách
-          </span>
-        </label>
-      </div>
+    <div className="flex w-full items-center justify-end">
       <div className="flex space-x-3">
         <Button variant="secondary" onClick={onClose}>
           Bỏ qua
@@ -733,7 +724,8 @@ const EditProductModalContent = ({ onClose, product, onSave, title, productList,
               <div className="col-span-12 space-y-5 lg:col-span-9">
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                   <Input
-                    label="Mã hàng (Duy nhất)"
+                    label="Mã hàng (Để trống sẽ tự động tạo)"
+                    placeholder="Tự động tạo nếu để trống"
                     disabled={!!product}
                     value={f.form.productCode || f.form.id || ''}
                     onChange={(e) => f.handleChange('productCode', e.target.value)}

@@ -26,6 +26,14 @@ export const getProducts = (filters = {}) => {
   return apiGet(`${ENDPOINTS.INVENTORY.GET_PRODUCTS}${buildQueryString(filters)}`);
 };
 
+export const getProductsLookup = (filters = {}) => {
+  return apiGet(`${ENDPOINTS.INVENTORY.GET_PRODUCTS_LOOKUP}${buildQueryString(filters)}`);
+};
+
+export const searchProducts = (filters = {}) => {
+  return apiGet(`${ENDPOINTS.INVENTORY.SEARCH_PRODUCTS}${buildQueryString(filters)}`);
+};
+
 export const getProduct = (id) => {
   return apiGet(ENDPOINTS.INVENTORY.GET_PRODUCT(id));
 };
@@ -101,6 +109,14 @@ export const deleteInwardInventory = (id) => {
   return apiDelete(ENDPOINTS.INVENTORY.DELETE_INWARD_INVENTORY(id));
 };
 
+export const getInwardBySupplier = (supplierId) => {
+  return apiGet(ENDPOINTS.INVENTORY.GET_INWARD_BY_SUPPLIER(supplierId));
+};
+
+export const getInwardReturnableItems = (inwardTicketId) => {
+  return apiGet(ENDPOINTS.INVENTORY.GET_INWARD_RETURNABLE_ITEMS(inwardTicketId));
+};
+
 // ============ Outward Inventory ============
 export const getOutwardInventories = (filters = {}) => {
   return apiGet(`${ENDPOINTS.INVENTORY.GET_OUTWARD_INVENTORIES}${buildQueryString(filters)}`);
@@ -155,6 +171,8 @@ export const getImportSuggestions = () => {
 const inventoryService = {
   getInventoryDashboard,
   getProducts,
+  getProductsLookup,
+  searchProducts,
   getProduct,
   createProduct,
   updateProduct,
@@ -173,6 +191,8 @@ const inventoryService = {
   confirmInwardInventory,
   cancelInwardInventory,
   deleteInwardInventory,
+  getInwardBySupplier,
+  getInwardReturnableItems,
   // Outward Inventory API
   getOutwardInventories,
   getOutwardInventory,

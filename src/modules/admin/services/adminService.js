@@ -2,7 +2,6 @@ import { apiGet, apiPost, apiPut, apiDelete, apiPatch } from '../../../services/
 import ENDPOINTS from '../../../services/endpoints';
 
 // ============ Dashboard ============
-export const getDashboardStats = () => apiGet(ENDPOINTS.ADMIN.DASHBOARD_STATS);
 export const getOverview = () => apiGet('/api/admin/dashboard/overview');
 export const getRevenueChart = (year) =>
   apiGet(`${ENDPOINTS.ADMIN.DASHBOARD_REVENUE}?year=${year}`);
@@ -21,8 +20,8 @@ export const createStaff = (data) => apiPost(ENDPOINTS.ADMIN.ACCOUNT_CREATE_STAF
 // Note: CreateOwner is now ACCOUNT_CREATE_OWNER
 
 export const updateUser = (id, data) => apiPut(ENDPOINTS.ADMIN.ACCOUNT_UPDATE(id), data);
-export const assignUserRoles = (id, roleIds) =>
-  apiPut(ENDPOINTS.ADMIN.ACCOUNT_ROLES(id), { roleIds });
+export const assignUserRoles = (id, roleId) =>
+  apiPut(ENDPOINTS.ADMIN.ACCOUNT_ROLES(id), { roleId });
 export const assignUserBranch = (id, branchId) =>
   apiPut(ENDPOINTS.ADMIN.ACCOUNT_ASSIGN_BRANCH(id), { branchId });
 export const changeUserStatus = (id, isActive) =>

@@ -157,8 +157,9 @@ export const apiClient = async (endpoint, options = {}) => {
         }
         throw new Error(errorBody401?.message || 'Unauthorized');
       }
-      // 403 → throw với message rõ
+      // 403 → throw với message rõ + dispatch global event cho toast
       if (response.status === 403) {
+        window.dispatchEvent(new CustomEvent('mep:forbidden', { detail: { message: 'Không có quyền thực hiện thao tác này' } }));
         const error403 = new Error('Không có quyền thực hiện thao tác này');
         error403.status = 403;
         throw error403;
@@ -216,7 +217,10 @@ export const apiClient = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
-    console.error(`API Error [${config.method} ${endpoint}]:`, error);
+    // 403 la loi quyen - expected, khong can log console
+    if (error?.status !== 403) {
+      console.error(`API Error [${config.method} ${endpoint}]:`, error);
+    }
     throw error;
   }
 };
@@ -278,5 +282,8 @@ export const apiPosPut = (endpoint, body, options = {}) =>
  */
 export const apiPosPatch = (endpoint, body, options = {}) =>
   apiClient(endpoint, { ...options, method: 'PATCH', body, baseURL: POS_BASE_URL });
+
+export const apiPosDelete = (endpoint, options = {}) =>
+  apiClient(endpoint, { ...options, method: 'DELETE', baseURL: POS_BASE_URL });
 
 export default apiClient;

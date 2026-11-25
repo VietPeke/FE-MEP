@@ -99,12 +99,11 @@ export const useProductList = (queryParams) => {
     };
   }, [token, queryParams, refreshTrigger]);
 
-  const handleToggleStatus = async (id, currentIsActive) => {
-    const newStatus = !currentIsActive;
+  const handleToggleStatus = async (id, newStatus) => {
     setProducts((prev) =>
       prev.map((p) =>
         p.productId === id || p.id === id
-          ? { ...p, isActive: newStatus, productStatus: newStatus ? 'active' : 'inactive' }
+          ? { ...p, isActive: newStatus, productStatus: newStatus ? 'active' : 'inactive', directSale: newStatus }
           : p
       )
     );
@@ -118,8 +117,9 @@ export const useProductList = (queryParams) => {
           p.productId === id || p.id === id
             ? {
                 ...p,
-                isActive: currentIsActive,
-                productStatus: currentIsActive ? 'active' : 'inactive',
+                isActive: !newStatus,
+                productStatus: !newStatus ? 'active' : 'inactive',
+                directSale: !newStatus,
               }
             : p
         )
@@ -136,7 +136,7 @@ export const useProductList = (queryParams) => {
     setProducts((prev) =>
       prev.map((p) =>
         selectedIds.includes(p.productId || p.id)
-          ? { ...p, isActive: targetStatus, productStatus: targetStatus ? 'active' : 'inactive' }
+          ? { ...p, isActive: targetStatus, productStatus: targetStatus ? 'active' : 'inactive', directSale: targetStatus }
           : p
       )
     );
@@ -209,12 +209,8 @@ export const useProductList = (queryParams) => {
         alert('Tên sản phẩm và Đơn vị tính là bắt buộc!');
         return;
       }
-      if (payload.costPrice < 0 || payload.salePrice < 0) {
-        alert('Giá vốn và giá bán không được âm!');
-        return;
-      }
-      if (!isUpdate && payload.costPrice <= 0) {
-        alert('Giá vốn khi tạo mới phải lớn hơn 0!');
+      if (payload.costPrice <= 0 || payload.salePrice <= 0) {
+        alert('Giá vốn và giá bán phải lớn hơn 0!');
         return;
       }
       if (payload.salePrice < payload.costPrice) {

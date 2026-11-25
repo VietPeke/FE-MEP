@@ -5,7 +5,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useOutletContext, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../shared/hooks/useAuth';
-import { hasRole } from '../../../shared/utils/roleRedirect';
+import { hasPermission } from '../../../shared/utils/permissions';
 import PosCartPanel from '../components/cart/PosCartPanel';
 import ProductGrid from '../components/product/ProductGrid';
 import CustomerBar from '../components/customer/CustomerBar';
@@ -29,7 +29,9 @@ import {
   finalizeInvoice,
   confirmTransfer,
   cancelPayment,
+  cancelInvoice,
 } from '../services/posService';
+import * as signalR from '@microsoft/signalr';
 import { apiPosGet } from '../../../services/apiClient';
 
 const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản' };
@@ -66,7 +68,7 @@ const mapToPosProduct = (p) => {
 };
 
 const POSScreen = () => {
-  const { search, setSearch, showNotice, quickAddCust, drafts, setDrafts, setFooterInfo } =
+  const { search, setSearch, showNotice, quickAddCust, drafts, setDrafts, setFooterInfo, addToast } =
     useOutletContext();
   const location = useLocation();
   const draftData = location.state?.draft;
@@ -149,6 +151,43 @@ const POSScreen = () => {
   // Đồng bộ ca đang mở từ BE về localStorage để tránh MSG-76 khi sang máy khác / clear cache
   const { refresh: refreshActiveShift } = useActiveShift({ enabled: !!user });
 
+  useEffect(() => {
+    refreshActiveShift();
+  }, [refreshActiveShift]);
+
+  // ---- SignalR real-time connection cho Màn hình Bán hàng (posHub) ----
+  useEffect(() => {
+    const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+    if (!token) return;
+
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${process.env.REACT_APP_API_URL}/r/posHub`, { accessTokenFactory: () => token })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on('InvoiceFinalized', (data) => {
+      console.log('SignalR InvoiceFinalized:', data);
+      refetchProducts(); // Tải lại danh sách sản phẩm để cập nhật tồn kho mới nhất
+    });
+
+    connection.start()
+      .then(() => {
+        // Lấy branchId từ localStorage (nếu có)
+        const userStr = localStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (user && user.branchId) {
+          connection.invoke('JoinBranchGroup', user.branchId).catch(() => {});
+        } else if (user && user.defaultBranchId) {
+          connection.invoke('JoinBranchGroup', user.defaultBranchId).catch(() => {});
+        }
+      })
+      .catch((err) => console.warn('PosHub connection err:', err));
+
+    return () => {
+      connection.stop().catch(() => {});
+    };
+  }, [refetchProducts]);
+
   // Tự động revalidate giá/tồn kho của các sản phẩm đang nằm trong giỏ hàng hiện tại khi danh sách posProducts thay đổi
   useEffect(() => {
     if (cart.cart.length > 0 && posProducts.length > 0) {
@@ -156,9 +195,7 @@ const POSScreen = () => {
     }
   }, [posProducts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const userRoles = Array.isArray(user?.roles) ? user?.roles : user?.role ? [user?.role] : [];
-  const isOwner = hasRole(userRoles, 'Owner');
-  const hasSaleCreate = user?.permissions?.includes('SALE_CREATE') || isOwner;
+  const hasSaleCreate = hasPermission(user, 'SALE_CREATE');
   const { filteredProducts } = usePosProducts(posProducts, 'Tất cả', search);
 
   // Calculate discount info based on subtotal
@@ -456,14 +493,17 @@ const POSScreen = () => {
       try {
         await finalizeInvoice(invoice.invoiceId);
       } catch (finalErr) {
-        console.warn('[POS] finalizeInvoice error:', finalErr);
-        console.warn('[DEBUG finalizeInvoice] chi tiết lỗi:', {
-          message: finalErr.message,
-          data: finalErr.data,
-          response: finalErr.response,
-          status: finalErr.status,
-          errors: finalErr.errors,
-        });
+        console.error('[POS] finalizeInvoice error:', finalErr);
+        const errorMsg = finalErr.data?.message || finalErr.message || 'Thanh toán thất bại, vui lòng thử lại.';
+        if (addToast) addToast(errorMsg, 'error');
+        
+        // Cố gắng hủy hóa đơn Draft nếu có thể
+        try {
+          await cancelInvoice(invoice.invoiceId);
+        } catch (_) {}
+        
+        setPaying(false);
+        return; // DỪNG LUỒNG THANH TOÁN TẠI ĐÂY, không clear cart!
       }
 
       // Cập nhật realtime cho ca đang mở (cộng dồn vào sessionStorage)
@@ -631,8 +671,8 @@ const POSScreen = () => {
     }
 
     const lines = payLines.filter((l) => l.amount > 0);
-    const hasTransfer = lines.some((l) => l.method === 'Transfer');
-    const hasCash = lines.some((l) => l.method === 'Cash');
+    const hasTransfer = lines.some((l) => l.method?.toLowerCase() === 'transfer');
+    const hasCash = lines.some((l) => l.method?.toLowerCase() === 'cash');
     const isCombined = hasTransfer && hasCash;
 
     if (isCombined) {
@@ -972,6 +1012,7 @@ const POSScreen = () => {
             selectedCustomer={selectedCustomer}
             onOpenPicker={() => setShowCustModal(true)}
             onClearCustomer={() => setSelectedCustomer(null)}
+            onQuickAdd={() => setShowQuickAddCust(true)}
           />
           <div className="flex-1 overflow-hidden">
             <PosCartPanel

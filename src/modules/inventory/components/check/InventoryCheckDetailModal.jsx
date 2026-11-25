@@ -56,10 +56,14 @@ const getStatusLabel = (item) => {
   }
 
   switch (status) {
-    case 'WaitingForApproval': return 'Chờ duyệt';
-    case 'Completed': return 'Đã hoàn thành';
-    case 'Cancelled': return 'Đã hủy';
-    default: return status;
+    case 'WaitingForApproval':
+      return 'Chờ duyệt';
+    case 'Completed':
+      return 'Đã hoàn thành';
+    case 'Cancelled':
+      return 'Đã hủy';
+    default:
+      return status;
   }
 };
 
@@ -140,15 +144,25 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
   const isWaiting = detailData?.status === 'WaitingForApproval';
   const isCompleted = detailData?.status === 'Completed';
 
-  const canCreate = hasPermission(user, 'STOCK_CHECK_CREATE');
-  const canApprove = hasPermission(user, 'STOCK_CHECK_APPROVE');
+  // const canCreate = hasPermission(user, 'STOCK_CHECK_CREATE');
+  const canApprovePermission = hasPermission(user, 'STOCK_CHECK_APPROVE');
   const canCancelPermission = hasPermission(user, 'STOCK_CHECK_CANCEL');
 
-  const canFill = isDraft && (canCreate || currentUserId === detailData?.assigneeUserId);
-  const canModify = isDraft && (canCreate || currentUserId === detailData?.createdByUserId);
-  const canApproveReject = canApprove && isWaiting;
+  const isOwnerOrAdmin =
+    user?.role === 'Owner' ||
+    user?.role === 'Admin' ||
+    user?.roles?.includes('Owner') ||
+    user?.roles?.includes('Admin');
+  const isCreator = currentUserId === detailData?.createdByUserId;
+  const isAssignee = currentUserId === detailData?.assigneeUserId;
+
+  // Cho phép edit/fill nếu là Owner/Admin, hoặc là người được gán, hoặc là người tạo
+  const canFill = isDraft && (isOwnerOrAdmin || isAssignee || isCreator);
+  const canModify = isDraft && (isOwnerOrAdmin || isAssignee || isCreator);
+
+  const canApproveReject = isWaiting && (isOwnerOrAdmin || canApprovePermission);
   const canCancel = canCancelPermission && (isDraft || isWaiting);
-  const canEditReasons = canApprove && (isWaiting || isCompleted);
+  const canEditReasons = canApprovePermission && (isWaiting || isCompleted);
 
   // ==================== ACTION HANDLERS ====================
   const handleFill = async () => {
@@ -300,7 +314,9 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
     {
       key: 'productCode',
       header: 'Mã SP',
-      render: (val) => <span className="font-semibold text-slate-700 dark:text-[#d4d4d4]">{val}</span>,
+      render: (val) => (
+        <span className="font-semibold text-slate-700 dark:text-[#d4d4d4]">{val}</span>
+      ),
     },
     {
       key: 'productName',
@@ -311,7 +327,11 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
       header: (
         <div className="text-center" title="Tồn kho thực tế hiện tại trong hệ thống.">
           Tồn Hệ Thống{' '}
-          <Icon name="info" size={14} className="inline align-text-bottom text-slate-400 dark:text-[#808080]" />
+          <Icon
+            name="info"
+            size={14}
+            className="inline align-text-bottom text-slate-400 dark:text-[#808080]"
+          />
         </div>
       ),
 
@@ -333,7 +353,6 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
           </div>
         );
       },
-
     },
     {
       key: 'actualQuantity',
@@ -347,20 +366,40 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
           return (
             <div className="text-center">
               <input
-                type="number"
                 min="0"
                 placeholder="Nhập..."
-                className={`w-24 rounded border px-2 py-1.5 text-center font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-[#004785] ${!hasValue
-                  ? 'border-orange-300 bg-orange-50 text-orange-700 dark:text-orange-400 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-300'
-                  : 'border-slate-300 text-[#004785] dark:border-[#404040] dark:bg-[#272727] dark:text-[#e5e5e5]'
-                  }`}
+                className={`w-24 rounded border px-2 py-1.5 text-center font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-[#004785] ${
+                  !hasValue
+                    ? 'border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-300 dark:text-orange-400'
+                    : 'border-slate-300 text-[#004785] dark:border-[#404040] dark:bg-[#272727] dark:text-[#e5e5e5]'
+                }`}
                 value={currentActualRaw}
-                onChange={(e) =>
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                onKeyDown={(e) => {
+                  if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Tab') {
+                    e.preventDefault();
+                  }
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pasted = (e.clipboardData || window.clipboardData).getData('text');
+                  const digits = pasted.replace(/[^0-9]/g, '');
+                  const val = currentActualRaw ? currentActualRaw + digits : digits;
                   setActualValues((prev) => ({
                     ...prev,
-                    [item.detailId]: e.target.value,
-                  }))
-                }
+                    [item.detailId]: val.slice(0, 9),
+                  }));
+                }}
+                onChange={(e) => {
+                  let val = e.target.value.replace(/[^0-9]/g, '');
+                  if (val.length > 9) val = val.slice(0, 9);
+                  setActualValues((prev) => ({
+                    ...prev,
+                    [item.detailId]: val,
+                  }));
+                }}
               />
             </div>
           );
@@ -389,22 +428,23 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
 
         return (
           <div
-            className={`text-center font-bold ${isDraft
-              ? !hasValue
-                ? 'text-slate-300 dark:text-[#666666]'
-                : displayDiscrepancy === 0
-                  ? 'text-slate-400 dark:text-[#808080]'
-                  : displayDiscrepancy > 0
-                    ? 'text-emerald-600'
-                    : 'text-red-600'
-              : !item.isCounted
-                ? 'text-slate-300 dark:text-[#666666]'
-                : item.discrepancy === 0
-                  ? 'text-slate-400 dark:text-[#808080]'
-                  : item.discrepancy > 0
-                    ? 'text-emerald-600'
-                    : 'text-red-600'
-              }`}
+            className={`text-center font-bold ${
+              isDraft
+                ? !hasValue
+                  ? 'text-slate-300 dark:text-[#666666]'
+                  : displayDiscrepancy === 0
+                    ? 'text-slate-400 dark:text-[#808080]'
+                    : displayDiscrepancy > 0
+                      ? 'text-emerald-600'
+                      : 'text-red-600'
+                : !item.isCounted
+                  ? 'text-slate-300 dark:text-[#666666]'
+                  : item.discrepancy === 0
+                    ? 'text-slate-400 dark:text-[#808080]'
+                    : item.discrepancy > 0
+                      ? 'text-emerald-600'
+                      : 'text-red-600'
+            }`}
           >
             {isDraft
               ? !hasValue
@@ -444,7 +484,11 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
             />
           );
         }
-        return <span className="text-xs italic text-slate-500 dark:text-[#999999]">{item.reasonNote || '—'}</span>;
+        return (
+          <span className="text-xs italic text-slate-500 dark:text-[#999999]">
+            {item.reasonNote || '—'}
+          </span>
+        );
       },
     });
   }
@@ -693,11 +737,9 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
               emptyMessage="Không có sản phẩm nào trong phiếu."
             />
             {isDraft && (
-
               <div className="border-t border-blue-100 bg-blue-50 p-3 text-center text-xs italic text-blue-600">
                 * Cột "Tồn Hệ Thống" hiển thị tồn kho thực tế hiện tại. "Chênh Lệch" được tính với
                 tồn kho này và sẽ được chốt tại thời điểm bấm "Gửi duyệt".
-
               </div>
             )}
           </div>
@@ -733,7 +775,10 @@ const InventoryCheckDetailModal = ({ isOpen, onClose, ticketId, onActionSuccess,
               <Textarea
                 label={
                   <>
-                    Lý do hủy phiếu <span className="font-normal text-slate-400 dark:text-[#808080]">(tùy chọn)</span>
+                    Lý do hủy phiếu{' '}
+                    <span className="font-normal text-slate-400 dark:text-[#808080]">
+                      (tùy chọn)
+                    </span>
                   </>
                 }
                 placeholder="VD: Hủy vì sai sản phẩm..."

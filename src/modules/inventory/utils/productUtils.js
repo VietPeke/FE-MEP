@@ -43,7 +43,16 @@ const isInactiveValue = (value) => {
   );
 };
 
-export const isProductActive = (row = {}) => row.productStatus !== 'inactive';
+export const isProductActive = (row = {}) => {
+  // Dùng productStatus làm nguồn chính (đã được normalizeProduct chuẩn hóa)
+  if (row.productStatus === 'inactive') return false;
+  if (row.productStatus === 'active') return true;
+  // Fallback: kiểm tra isActive boolean
+  if (row.isActive === true) return true;
+  if (row.isActive === false) return false;
+  // Cuối cùng fallback về active (an toàn)
+  return true;
+};
 
 export const normalizeProduct = (product = {}, index = 0) => {
   const id = product.id || product.productId || `API-${index + 1}`;
@@ -172,18 +181,28 @@ export const updateProductPayload = (form) => {
     productCode: form.productCode || form.id || '',
     productName: form.name || form.productName || '',
     barcode: form.barcode || '',
+    unit: form.baseUnit?.name || form.unit || 'cái',
     specification: buildSpecification(form),
     itemType: form.itemType || 'Goods',
     brandName: form.brand || '',
     categoryName: form.group || '',
     supplierId: form.supplierId || null,
+    costPrice: Number(form.costPrice || 0),
+    salePrice: Number(form.salePrice || 0),
+    actualStock: Number(form.stock || 0),
+    availableStock: Number(form.availableStock ?? form.stock ?? 0),
+    reservedStock: Number(form.reservedStock || 0),
+    shelfLocation: form.shelfLocation || form.location || form.locations?.[0] || '',
+    minimumStock: Number(form.minimumStock ?? form.stockMin ?? 0),
+    maximumStock: Number(form.stockMax ?? 0),
     weight: Number(form.weight) || null,
     weightUnit: form.weightUnit || 'g',
     width: Number(form.width) || null,
     length: Number(form.length) || null,
     height: Number(form.height) || null,
     sizeUnit: form.sizeUnit || 'mm',
-    medias: (form.images || [])
+    imageUrl: form.image || '',
+    images: (form.images || [])
       .map((i) => (typeof i === 'string' ? i : i?.url || ''))
       .filter(Boolean),
     attributes: (form.attributes || [])
@@ -198,6 +217,8 @@ export const updateProductPayload = (form) => {
       price: Number(u.price) || 0,
       directSale: u.directSale !== false,
     })),
+    isActive: form.productStatus !== 'inactive' && form.status !== 'inactive' && form.isActive !== false,
+    directSale: form.directSale !== false,
   };
 };
 

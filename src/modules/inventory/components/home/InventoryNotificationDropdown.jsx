@@ -6,32 +6,58 @@ import {
   markNotificationsAsRead,
 } from '../../services/inventoryCheckService';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../../shared/hooks/useAuth';
+import { hasPermission } from '../../../../shared/utils/permissions';
+
+const STORAGE_KEY = 'inventory_notif_read_ids';
+
+const getReadIds = () => {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+};
+
+const addReadIds = (ids) => {
+  try {
+    const current = getReadIds();
+    const merged = [...new Set([...current, ...ids])];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    return merged;
+  } catch { return ids; }
+};
 
 const InventoryNotificationDropdown = () => {
+  const { user } = useAuth();
+  const canViewNotifications = hasPermission(user, 'STOCK_CHECK_VIEW');
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [panelStyle, setPanelStyle] = useState({});
   const btnRef = useRef(null);
   const panelRef = useRef(null);
   const navigate = useNavigate();
 
+  // Derived tu local state, khong bi polling ghi de
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
   const fetchNotifications = async () => {
+    if (!canViewNotifications) return;
     try {
       setLoading(true);
       const invRes = await getInventoryNotifications({ pageNumber: 1, pageSize: 20 }).catch(() => null);
-      
-      let invItems = [];
-      let newUnreadCount = 0;
 
       if (invRes?.success && invRes.data) {
-        invItems = invRes.data.items || [];
-        newUnreadCount = invRes.data.unreadCount || 0;
+        const invItems = invRes.data.items || [];
+        const readIds = getReadIds();
+        // Merge voi localStorage de giu isRead qua cac lan F5
+        setNotifications((prev) => {
+          const prevMap = new Map(prev.map((n) => [n.notificationId, n]));
+          return invItems.map((n) => {
+            const existing = prevMap.get(n.notificationId);
+            if (existing?.isRead) return { ...n, isRead: true };
+            if (readIds.includes(n.notificationId)) return { ...n, isRead: true };
+            return n;
+          });
+        });
       }
-
-      setNotifications(invItems);
-      setUnreadCount(newUnreadCount);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -54,6 +80,7 @@ const InventoryNotificationDropdown = () => {
       clearInterval(interval);
       window.removeEventListener('RefreshNotifications', handleRefresh);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -83,7 +110,7 @@ const InventoryNotificationDropdown = () => {
   const handleToggle = () => {
     const nextState = !isOpen;
     setIsOpen(nextState);
-    if (nextState) {
+    if (nextState && canViewNotifications) {
       fetchNotifications();
       setTimeout(updatePosition, 0);
     }
@@ -103,11 +130,13 @@ const InventoryNotificationDropdown = () => {
 
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
+    const allIds = notifications.filter((n) => !n.isRead).map((n) => n.notificationId);
+    // Cap nhat localStorage truoc de ton tai qua F5
+    addReadIds(allIds);
     try {
       const res = await markNotificationsAsRead(null, true);
       if (res?.success) {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-        setUnreadCount(0);
       }
     } catch (error) {
       console.error('Failed to mark all as read:', error);
@@ -118,12 +147,12 @@ const InventoryNotificationDropdown = () => {
 
     // For inventory notifications
     if (!notif.isRead) {
+      addReadIds([notif.notificationId]);
       try {
         await markNotificationsAsRead([notif.notificationId], false);
         setNotifications((prev) =>
           prev.map((n) => (n.notificationId === notif.notificationId ? { ...n, isRead: true } : n))
         );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch (error) {
         console.error('Failed to mark as read:', error);
       }
@@ -203,21 +232,21 @@ const InventoryNotificationDropdown = () => {
     }
   };
 
-  return (
+  return canViewNotifications ? (
     <div className="relative pl-1">
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={handleToggle}
-        className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 active:scale-95 dark:text-[#999999] dark:hover:bg-[#272727]"
-      >
-        <Icon name="notifications" size={20} />
-        {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
+        <button
+          ref={btnRef}
+          type="button"
+          onClick={handleToggle}
+          className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 active:scale-95 dark:text-[#999999] dark:hover:bg-[#272727]"
+        >
+          <Icon name="notifications" size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
 
       {isOpen && createPortal(
         <div ref={panelRef} style={panelStyle} className="w-80 sm:w-96 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-[#333333] dark:bg-[#0f0f0f]">
@@ -295,7 +324,7 @@ const InventoryNotificationDropdown = () => {
         </div>
         , document.body)}
     </div>
-  );
+      ) : null;
 };
 
 export default InventoryNotificationDropdown;

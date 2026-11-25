@@ -1,31 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../../shared/components/Icon';
+import {
+  getAssignableRoles,
+  canonicalizeRoleName,
+  getRoleName,
+  getRoleId,
+  normalizeRoleName,
+} from '../../../../shared/utils/roles';
 
 const AssignRoleModal = ({ isOpen, onClose, onSave, roles, user }) => {
-  const [roleIds, setRoleIds] = useState([]);
+  const [roleId, setRoleId] = useState('');
+
+  const assignableRoles = getAssignableRoles(roles);
 
   useEffect(() => {
     if (isOpen && user) {
-      setRoleIds((user.roles || []).map((r) => r.roleId));
+      const currentRole = (user.roles || [])[0];
+      const roleName = getRoleName(currentRole);
+      const canonical = canonicalizeRoleName(roleName);
+      const matched = canonical
+        ? assignableRoles.find((r) => r.key === canonical)
+        : assignableRoles.find((r) => normalizeRoleName(r.roleName) === normalizeRoleName(roleName));
+      setRoleId(matched?.roleId || getRoleId(currentRole) || '');
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, assignableRoles]);
 
   if (!isOpen || !user) return null;
 
-  const handleRoleToggle = (roleId) => {
-    setRoleIds((prev) =>
-      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
-    );
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(user.userId, roleIds);
+    if (!roleId) return;
+    try {
+      await onSave(user.userId, roleId);
+    } catch {
+      // API failed -> revert to original role
+      const currentRole = (user.roles || [])[0];
+      const roleName = getRoleName(currentRole);
+      const canonical = canonicalizeRoleName(roleName);
+      const matched = canonical
+        ? assignableRoles.find((r) => r.key === canonical)
+        : assignableRoles.find((r) => normalizeRoleName(r.roleName) === normalizeRoleName(roleName));
+      setRoleId(matched?.roleId || getRoleId(currentRole) || '');
+    }
   };
-
-  const assignableRoles = roles.filter(
-    (r) => r.roleName.toLowerCase() !== 'admin' && r.roleName.toLowerCase() !== 'communityuser'
-  );
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
@@ -50,15 +67,17 @@ const AssignRoleModal = ({ isOpen, onClose, onSave, roles, user }) => {
                 className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 transition-colors hover:bg-slate-50 dark:border-[#333333] dark:hover:bg-[#1a1a1a]"
               >
                 <input
-                  type="checkbox"
-                  checked={roleIds.includes(role.roleId)}
-                  onChange={() => handleRoleToggle(role.roleId)}
-                  className="h-4 w-4 rounded accent-[#004785]"
+                  type="radio"
+                  name="role"
+                  value={role.roleId}
+                  checked={roleId === role.roleId}
+                  onChange={() => setRoleId(role.roleId)}
+                  className="h-4 w-4 accent-[#004785]"
                 />
                 <div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-[#e5e5e5]">{role.roleName}</div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-[#e5e5e5]">{role.label}</div>
                   <div className="text-[10px] leading-tight text-slate-500 dark:text-[#999999]">
-                    {role.description || `Quyền hạn của ${role.roleName}`}
+                    {role.description || `Quyền hạn của ${role.label}`}
                   </div>
                 </div>
               </label>
@@ -75,7 +94,8 @@ const AssignRoleModal = ({ isOpen, onClose, onSave, roles, user }) => {
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-[#004785] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700"
+              disabled={!roleId}
+              className="rounded-lg bg-[#004785] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-800 disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700"
             >
               Lưu thay đổi
             </button>

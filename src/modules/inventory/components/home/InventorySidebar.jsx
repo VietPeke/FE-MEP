@@ -3,8 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../../../../shared/components/Icon';
 import { sidebarItems } from '../../data/inventoryPageData';
 import { useAuth } from '../../../../shared/hooks/useAuth';
-import { hasRole } from '../../../../shared/utils/roleRedirect';
-import { hasPermission } from '../../../../shared/utils/permissions';
+import { hasAnyPermission } from '../../../../shared/utils/permissions';
 
 const InventorySidebar = ({ open = true, onToggle }) => {
   const navigate = useNavigate();
@@ -25,27 +24,32 @@ const InventorySidebar = ({ open = true, onToggle }) => {
     return initial;
   });
 
-  const userRoles = user?.roles || (user?.role ? [user.role] : []);
-  const isOwner = hasRole(userRoles, 'Owner');
-
   const visibleMenuItems = useMemo(() => {
     const checkPermission = (item) => {
-      if (item.ownerOnly && !isOwner) return false;
-      if (item.staffOnly && isOwner) return false;
-      if (item.permission && !hasPermission(user, item.permission)) return false;
+      if (item.hideWhenPermissions && hasAnyPermission(user, item.hideWhenPermissions)) return false;
+      if (item.permissions && !hasAnyPermission(user, item.permissions)) return false;
+      if (item.permission && !hasAnyPermission(user, [item.permission])) return false;
       return true;
     };
 
-    return sidebarItems.filter(checkPermission).map((item) => {
-      if (item.children) {
-        return {
-          ...item,
-          children: item.children.filter(checkPermission),
-        };
-      }
-      return item;
-    });
-  }, [isOwner, user]);
+    return sidebarItems
+      .filter(checkPermission)
+      .map((item) => {
+        if (item.children) {
+          const visibleChildren = item.children.filter(checkPermission);
+          return { ...item, children: visibleChildren };
+        }
+        return item;
+      })
+      .filter((item) => {
+        // Giu lai item neu:
+        // - Co path truc tiep (co the click duoc), hoac
+        // - Co it nhat 1 children visible
+        if (item.path) return true;
+        if (item.children && item.children.length > 0) return true;
+        return false;
+      });
+  }, [user]);
 
   useEffect(() => {
     visibleMenuItems.forEach((item) => {

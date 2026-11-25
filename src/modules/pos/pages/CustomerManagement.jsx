@@ -13,10 +13,13 @@ import { Table } from '../../../shared/components/Table';
 import { formatCurrency } from '../../../shared/utils/formatCurrency';
 import { formatDate } from '../../../shared/utils/formatDate';
 import Icon from '../../../shared/components/Icon';
+import { hasPermission } from '../../../shared/utils/permissions';
+import { useAuth } from '../../../shared/hooks/useAuth';
 import {
   getCustomers,
   createCustomer,
   updateCustomer,
+  deleteCustomer,
   getReturns,
   getOrders,
   getCustomerOrders,
@@ -55,6 +58,7 @@ const mapCustomer = (c) => ({
 const isValidPhone = (phone) => /^(0[3|5|7|8|9])[0-9]{8}$/.test(phone);
 
 export const CustomerManagement = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +77,11 @@ export const CustomerManagement = () => {
   const [form, setForm] = useState(INITIAL_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Delete confirm modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Detail panel
   const [customerOrders, setCustomerOrders] = useState([]);
@@ -466,6 +475,28 @@ export const CustomerManagement = () => {
     navigate('/pos', { state: { selectedCustomer: selected } });
   };
 
+  const handleOpenDelete = () => {
+    if (!selected) return;
+    setDeletingCustomer(selected);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingCustomer) return;
+    setDeleting(true);
+    try {
+      await deleteCustomer(deletingCustomer.id);
+      setCustomers((prev) => prev.filter((c) => c.id !== deletingCustomer.id));
+      if (selected?.id === deletingCustomer.id) setSelected(null);
+      setShowDeleteModal(false);
+      setDeletingCustomer(null);
+    } catch (err) {
+      alert('Lỗi: ' + (err.message || 'Không thể xóa khách hàng'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const getOrderStatusBadge = (status, hasExchange) => (
     <>
       {hasExchange && <Badge variant="info">Đổi hàng</Badge>}
@@ -610,9 +641,11 @@ export const CustomerManagement = () => {
               ))}
             </select>
           </div>
-          <Button variant="primary" onClick={handleOpenAdd}>
-            + Thêm khách hàng
-          </Button>
+          {hasPermission(user, 'CUSTOMER_CREATE') && (
+            <Button variant="primary" onClick={handleOpenAdd}>
+              + Thêm khách hàng
+            </Button>
+          )}
         </div>
 
         <Card padding="p-0">
@@ -629,7 +662,10 @@ export const CustomerManagement = () => {
                   <span>Hiển thị</span>
                   <select
                     value={pageSize}
-                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
                     className="rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-primary dark:border-[#404040] dark:bg-[#1a1a1a] dark:text-[#d4d4d4]"
                   >
                     <option value={20}>20 dòng</option>
@@ -688,42 +724,84 @@ export const CustomerManagement = () => {
                       <Badge variant={GROUP_COLORS[selected.group] || 'secondary'} size="sm">
                         {selected.group}
                       </Badge>
-                      <span className="text-xs text-slate-400 dark:text-[#808080]">KH từ {selected.createdAt}</span>
+                      <span className="text-xs text-slate-400 dark:text-[#808080]">
+                        KH từ {selected.createdAt}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button
-                    onClick={handleOpenEdit}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-[#004785] dark:text-[#808080] dark:hover:bg-[#272727]"
-                    title="Chỉnh sửa"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </button>
+                  {hasPermission(user, 'CUSTOMER_UPDATE') && (
+                    <button
+                      onClick={handleOpenEdit}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-[#004785] dark:text-[#808080] dark:hover:bg-[#272727]"
+                      title="Chỉnh sửa"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  {hasPermission(user, 'CUSTOMER_DELETE') && (
+                    <button
+                      onClick={handleOpenDelete}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:text-[#808080] dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                      title="Xóa khách hàng"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-2 border-t border-slate-100 pt-3 dark:border-[#333333]">
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="w-5 shrink-0 text-center text-slate-400 dark:text-[#808080]">📞</span>
-                  <span className="truncate font-medium text-slate-900 dark:text-[#e5e5e5]">{selected.phone}</span>
+                  <span className="w-5 shrink-0 text-center text-slate-400 dark:text-[#808080]">
+                    📞
+                  </span>
+                  <span className="truncate font-medium text-slate-900 dark:text-[#e5e5e5]">
+                    {selected.phone}
+                  </span>
                 </div>
                 {selected.email && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="w-5 shrink-0 text-center text-slate-400 dark:text-[#808080]">✉️</span>
-                    <span className="truncate text-slate-600 dark:text-[#999999]">{selected.email}</span>
+                    <span className="w-5 shrink-0 text-center text-slate-400 dark:text-[#808080]">
+                      ✉️
+                    </span>
+                    <span className="truncate text-slate-600 dark:text-[#999999]">
+                      {selected.email}
+                    </span>
                   </div>
                 )}
                 <div className="flex items-start gap-2 text-sm">
-                  <span className="w-5 shrink-0 text-center text-slate-400 dark:text-[#808080]">📍</span>
-                  <span className="truncate text-slate-600 dark:text-[#999999]">{selected.address || '-'}</span>
+                  <span className="w-5 shrink-0 text-center text-slate-400 dark:text-[#808080]">
+                    📍
+                  </span>
+                  <span className="truncate text-slate-600 dark:text-[#999999]">
+                    {selected.address || '-'}
+                  </span>
                 </div>
               </div>
               {selected.notes && (
@@ -806,12 +884,16 @@ export const CustomerManagement = () => {
                     </button>
                   ))}
                   {filteredOrders.length === 0 && (
-                    <p className="py-2 text-center text-xs text-slate-400 dark:text-[#808080]">Không tìm thấy</p>
+                    <p className="py-2 text-center text-xs text-slate-400 dark:text-[#808080]">
+                      Không tìm thấy
+                    </p>
                   )}
                 </div>
               </div>
             ) : (
-              <p className="py-4 text-center text-sm text-slate-400 dark:text-[#808080]">Chưa có đơn hàng</p>
+              <p className="py-4 text-center text-sm text-slate-400 dark:text-[#808080]">
+                Chưa có đơn hàng
+              </p>
             )}
           </Card>
         </div>
@@ -819,7 +901,7 @@ export const CustomerManagement = () => {
 
       {/* Placeholder */}
       {(!selected || !isSelectedInList) && (
-        <div className="hidden w-96 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 xl:flex dark:border-[#333333]">
+        <div className="hidden w-96 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 dark:border-[#333333] xl:flex">
           <div className="px-4 text-center">
             <p className="text-4xl text-slate-300">👥</p>
             <p className="mt-3 text-sm font-medium text-slate-400">Chọn một khách hàng</p>
@@ -911,6 +993,10 @@ export const CustomerManagement = () => {
                 setForm((f) => ({ ...f, name: e.target.value }));
                 setFormErrors((p) => ({ ...p, name: '' }));
               }}
+              onBlur={() => {
+                const errs = validateForm(form);
+                if (errs.name) setFormErrors((p) => ({ ...p, name: errs.name }));
+              }}
               required
               error={formErrors.name}
             />
@@ -923,6 +1009,10 @@ export const CustomerManagement = () => {
               onChange={(e) => {
                 setForm((f) => ({ ...f, phone: e.target.value }));
                 setFormErrors((p) => ({ ...p, phone: '' }));
+              }}
+              onBlur={() => {
+                const errs = validateForm(form);
+                if (errs.phone) setFormErrors((p) => ({ ...p, phone: errs.phone }));
               }}
               required
               error={formErrors.phone}
@@ -943,20 +1033,6 @@ export const CustomerManagement = () => {
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
           />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Nhóm khách hàng</label>
-            <select
-              value={form.group}
-              onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-[#004785] focus:outline-none"
-            >
-              {CUSTOMER_GROUPS.filter((g) => g !== 'Tất cả').map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Ghi chú</label>
             <textarea
@@ -1013,6 +1089,10 @@ export const CustomerManagement = () => {
                 setForm((f) => ({ ...f, name: e.target.value }));
                 setFormErrors((p) => ({ ...p, name: '' }));
               }}
+              onBlur={() => {
+                const errs = validateForm(form);
+                if (errs.name) setFormErrors((p) => ({ ...p, name: errs.name }));
+              }}
               required
               error={formErrors.name}
             />
@@ -1025,6 +1105,10 @@ export const CustomerManagement = () => {
               onChange={(e) => {
                 setForm((f) => ({ ...f, phone: e.target.value }));
                 setFormErrors((p) => ({ ...p, phone: '' }));
+              }}
+              onBlur={() => {
+                const errs = validateForm(form);
+                if (errs.phone) setFormErrors((p) => ({ ...p, phone: errs.phone }));
               }}
               required
               error={formErrors.phone}
@@ -1046,20 +1130,6 @@ export const CustomerManagement = () => {
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
           />
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Nhóm khách hàng</label>
-            <select
-              value={form.group}
-              onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-[#004785] focus:outline-none"
-            >
-              {CUSTOMER_GROUPS.filter((g) => g !== 'Tất cả').map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Ghi chú</label>
             <textarea
               rows={3}
@@ -1071,6 +1141,51 @@ export const CustomerManagement = () => {
             />
           </div>
         </div>
+      </Modal>
+
+      {/* ====== MODAL XÁC NHẬN XÓA ====== */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          if (!deleting) {
+            setShowDeleteModal(false);
+            setDeletingCustomer(null);
+          }
+        }}
+        title="Xác nhận xóa khách hàng"
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeletingCustomer(null);
+              }}
+              disabled={deleting}
+            >
+              Hủy
+            </Button>
+            <Button variant="danger" onClick={handleDelete} loading={deleting}>
+              Xóa khách hàng
+            </Button>
+          </>
+        }
+      >
+        {deletingCustomer && (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-700 dark:text-[#cccccc]">
+              Bạn có chắc muốn xóa khách hàng{' '}
+              <strong className="text-slate-900 dark:text-[#e5e5e5]">
+                {deletingCustomer.name}
+              </strong>{' '}
+              ({deletingCustomer.phone})?
+            </p>
+            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+              Nếu khách đã có đơn hàng, hệ thống sẽ chỉ ẩn khách (soft-delete) để giữ lịch sử.
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
